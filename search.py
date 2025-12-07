@@ -79,6 +79,10 @@ async def simple_start(msg: types.Message, state: FSMContext):
 
 @router.message(SimpleSearch.from_city)
 async def simple_from(msg: types.Message, state: FSMContext):
+    if msg.text == "⬅️ Назад в меню":
+        await state.clear()
+        return await msg.answer("Главное меню:", reply_markup=keyboards.main_menu())
+
     await state.update_data(from_city=msg.text)
     await state.set_state(SimpleSearch.to_city)
     await msg.answer("Введите город прилёта:", reply_markup=keyboards.back_to_main())
@@ -87,6 +91,10 @@ async def simple_from(msg: types.Message, state: FSMContext):
 # 2. КУДА
 @router.message(SimpleSearch.to_city)
 async def simple_to(msg: types.Message, state: FSMContext):
+    if msg.text == "⬅️ Назад в меню":
+        await state.clear()
+        return await msg.answer("Главное меню:", reply_markup=keyboards.main_menu())
+
     await state.update_data(to_city=msg.text)
     await state.set_state(SimpleSearch.trip_type)
     await msg.answer(
@@ -98,6 +106,9 @@ async def simple_to(msg: types.Message, state: FSMContext):
 # 3. ONE-WAY или ROUND-TRIP
 @router.message(SimpleSearch.trip_type)
 async def simple_trip_type(msg: types.Message, state: FSMContext):
+    if msg.text == "⬅️ Назад в меню":
+        await state.clear()
+        return await msg.answer("Главное меню:", reply_markup=keyboards.main_menu())
 
     trip = msg.text.lower()
     if trip not in ["в одну сторону", "туда-обратно"]:
@@ -253,6 +264,12 @@ async def ask_price_or_skip(msg: types.Message, state: FSMContext, filters):
 # ------------------------------------------------
 @router.message(SimpleSearch.baggage)
 async def baggage_step(msg: types.Message, state: FSMContext):
+    if msg.text == "⬅️ Назад в меню":
+        await state.clear()
+        return await msg.answer(
+            "Главное меню:",
+            reply_markup=keyboards.main_menu()
+        )
     await state.update_data(baggage=msg.text)
     await msg.answer(
         "Тип пересадок:",
@@ -266,6 +283,12 @@ async def baggage_step(msg: types.Message, state: FSMContext):
 # ------------------------------------------------
 @router.message(SimpleSearch.transfers)
 async def transfers_step(msg: types.Message, state: FSMContext):
+    if msg.text == "⬅️ Назад в меню":
+        await state.clear()
+        return await msg.answer(
+            "Главное меню:",
+            reply_markup=keyboards.main_menu()
+        )
     await state.update_data(transfers=msg.text)
 
     filters = await filters_repo.get_filters(msg.from_user.id)
@@ -286,3 +309,91 @@ async def transfers_step(msg: types.Message, state: FSMContext):
 async def price_step(msg: types.Message, state: FSMContext):
     await state.update_data(price_limit=msg.text)
     await finish_search(msg, state)
+
+# ------------------------------------------------
+# ГЛОБАЛЬНЫЙ НАЗАД ДЛЯ ВСЕХ СОСТОЯНИЙ ПОИСКА
+# ------------------------------------------------
+
+@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.from_city)
+@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.to_city)
+@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.trip_type)
+@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.dates)
+@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.depart_date)
+@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.return_date)
+@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.baggage)
+@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.transfers)
+@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.price_limit)
+async def search_back(msg: types.Message, state: FSMContext):
+    await state.clear()
+    await msg.answer("Главное меню:", reply_markup=keyboards.main_menu())
+
+# ------------------------------------------------
+# ПЕРЕЛИСТЫВАНИЕ КАЛЕНДАРЯ
+# ------------------------------------------------
+
+@router.callback_query(
+    F.data.startswith("prev_"),
+    SimpleSearch.dates
+)
+@router.callback_query(
+    F.data.startswith("prev_"),
+    SimpleSearch.depart_date
+)
+@router.callback_query(
+    F.data.startswith("prev_"),
+    SimpleSearch.return_date
+)
+async def prev_month(callback: types.CallbackQuery, state: FSMContext):
+
+    _, y, m = callback.data.split("_")
+    y = int(y)
+    m = int(m)
+
+    data = await state.get_data()
+
+    # минимальная дата может быть None
+    min_date = None
+    if "depart_date" in data:
+        try:
+            min_date = datetime.strptime(data["depart_date"], "%d.%m.%Y")
+        except:
+            min_date = None
+
+    await callback.message.edit_reply_markup(
+        reply_markup=build_calendar(y, m, min_date=min_date)
+    )
+    await callback.answer()
+
+
+@router.callback_query(
+    F.data.startswith("next_"),
+    SimpleSearch.dates
+)
+@router.callback_query(
+    F.data.startswith("next_"),
+    SimpleSearch.depart_date
+)
+@router.callback_query(
+    F.data.startswith("next_"),
+    SimpleSearch.return_date
+)
+async def next_month(callback: types.CallbackQuery, state: FSMContext):
+
+    _, y, m = callback.data.split("_")
+    y = int(y)
+    m = int(m)
+
+    data = await state.get_data()
+
+    # минимальная дата может быть None
+    min_date = None
+    if "depart_date" in data:
+        try:
+            min_date = datetime.strptime(data["depart_date"], "%d.%m.%Y")
+        except:
+            min_date = None
+
+    await callback.message.edit_reply_markup(
+        reply_markup=build_calendar(y, m, min_date=min_date)
+    )
+    await callback.answer()
