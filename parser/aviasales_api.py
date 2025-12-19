@@ -1,63 +1,30 @@
 import os
-import requests
-import filters_repository as filters_repo
+import aiohttp
 
 API_TOKEN = os.getenv("API_TOKEN")
 
+async def fetch_json(url, params):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, params=params) as response:
+            if response.status == 200:
+                return await response.json()
+            else:
+                raise RuntimeError(f"Ошибка API: {response.status}")
 
-async def get_user_currency(user_id: int) -> str:
+async def parse_flights(origin: str, destination: str, depart_date: str = None,
+                        month: str = None, currency: str = "RUB", endpoint: str = "latest"):
     """
-    Возвращает валюту пользователя из фильтров.
+    Общий парсер рейсов.
+    - origin, destination — города
+    - depart_date — для latest
+    - month — для calendar
+    - currency — валюта
+    - endpoint — "latest" или "calendar"
     """
-    currency = await filters_repo.get_filter(user_id, "currency")
-    if currency in ["RUB", "USD", "EUR"]:
-        return currency
-    return "RUB"
-
-
-async def get_flight_price_for_user(user_id: int, origin: str, destination: str, depart_date: str):
-    """
-    Возвращает JSON с ценами на рейсы в валюте пользователя.
-    """
-    currency = await get_user_currency(user_id)
-    return get_flight_price(origin, destination, depart_date, currency)
-
-
-async def get_calendar_prices_for_user(user_id: int, origin: str, destination: str, month: str):
-    """
-    Возвращает JSON с ценами по дням в валюте пользователя.
-    """
-    currency = await get_user_currency(user_id)
-    return get_calendar_prices(origin, destination, month, currency)
-
-
-def get_flight_price(origin: str, destination: str, depart_date: str, currency: str):
-    url = "https://api.travelpayouts.com/v2/prices/latest"
-    params = {
-        "origin": origin,
-        "destination": destination,
-        "depart_date": depart_date,
-        "currency": currency,
-        "token": API_TOKEN
-    }
-    response = requests.get(url, params=params)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        raise RuntimeError(f"Ошибка API: {response.status_code}")
-
-
-def get_calendar_prices(origin: str, destination: str, month: str, currency: str):
-    url = "https://api.travelpayouts.com/v2/prices/calendar"
-    params = {
-        "origin": origin,
-        "destination": destination,
-        "month": month,  # YYYY-MM
-        "currency": currency,
-        "token": API_TOKEN
-    }
-    response = requests.get(url, params=params)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        raise RuntimeError(f"Ошибка API: {response.status_code}")
+    base_url = f"https://api.travelpayouts.com/v2/prices/{endpoint}"
+    params = {"origin": origin, "destination": destination, "currency": currency, "token": API_TOKEN}
+    if endpoint == "latest" and depart_date:
+        params["depart_date"] = depart_date
+    if endpoint == "calendar" and month:
+        params["month"] = month
+    return await fetch_json(base_url, params)
