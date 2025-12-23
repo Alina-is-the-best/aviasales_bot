@@ -1,9 +1,9 @@
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 
-import keyboards
+from keyboards import keyboards
 from states import TicketAdd
-import tickets_repository as repo
+from repo import tickets_repository as repo
 
 router = Router()
 
@@ -12,9 +12,7 @@ def register(dp):
     dp.include_router(router)
 
 
-# -------------------------------------------------------
 # ГЛАВНОЕ МЕНЮ РАЗДЕЛА "Мои билеты"
-# -------------------------------------------------------
 @router.message(F.text == "Мои билеты")
 async def my_tickets_root(msg: types.Message):
     await msg.answer(
@@ -23,9 +21,7 @@ async def my_tickets_root(msg: types.Message):
     )
 
 
-# -------------------------------------------------------
-# КУПЛЕННЫЕ БИЛЕТЫ — СПИСОК
-# -------------------------------------------------------
+# КУПЛЕННЫЕ БИЛЕТЫ
 @router.message(F.text == "Купленные билеты")
 async def purchased_tickets(msg: types.Message):
     tickets = await repo.get_tickets(msg.from_user.id)
@@ -63,9 +59,7 @@ async def purchased_tickets(msg: types.Message):
     )
 
 
-# -------------------------------------------------------
-# ДОБАВИТЬ БИЛЕТ — НАЖАТИЕ НА КНОПКУ
-# -------------------------------------------------------
+# ДОБАВИТЬ БИЛЕТ
 @router.callback_query(F.data == "ticket_add")
 async def add_ticket_start(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(TicketAdd.waiting_for_data)
@@ -79,20 +73,9 @@ async def add_ticket_start(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-# -------------------------------------------------------
 # ДОБАВЛЕНИЕ БИЛЕТА — FSM
-# -------------------------------------------------------
 @router.message(TicketAdd.waiting_for_data)
 async def add_ticket_process(msg: types.Message, state: FSMContext):
-
-    # ←←← ДОБАВЛЕНО: обработка кнопки "Назад"
-    if msg.text == "⬅️ Назад в меню":
-        await state.clear()
-        return await msg.answer(
-            "Главное меню:",
-            reply_markup=keyboards.main_menu()
-        )
-
     # Остальная логика
     parts = msg.text.split(",")
 
@@ -117,10 +100,7 @@ async def add_ticket_process(msg: types.Message, state: FSMContext):
     )
 
 
-
-# -------------------------------------------------------
 # ОБРАБОТКА ВЫБОРА КОНКРЕТНОГО БИЛЕТА
-# -------------------------------------------------------
 @router.callback_query(F.data.startswith("ticket_"))
 async def ticket_details(callback: types.CallbackQuery):
     index = int(callback.data.split("_")[1]) - 1
@@ -145,15 +125,16 @@ async def ticket_details(callback: types.CallbackQuery):
     await callback.answer()
 
 
-# -------------------------------------------------------
 # Удаление билета
-# -------------------------------------------------------
 @router.callback_query(F.data.startswith("delete_"))
 async def delete_ticket(callback: types.CallbackQuery):
     ticket_id = int(callback.data.split("_")[1])
 
     await repo.delete_ticket(ticket_id)
 
-    await callback.message.answer("Билет удалён.", reply_markup=keyboards.tickets_main_kb())
+    await callback.message.answer(
+        "Билет удалён.",
+        reply_markup=keyboards.tickets_main_kb()
+    )
 
     await callback.answer()

@@ -5,8 +5,8 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
-    from parser.aviasales_api import parse_flights
-    print("✅ Модуль parser успешно импортирован")
+    from api.aviasales_api import parse_flights
+    print("✅ Модуль api успешно импортирован")
 except ImportError as e:
     print(f"❌ Ошибка импорта: {e}")
     print(f"Текущий путь Python: {sys.path}")

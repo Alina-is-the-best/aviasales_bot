@@ -1,4 +1,4 @@
-from db import TrackedTicket, async_session
+from data.db import TrackedTicket, async_session
 from sqlalchemy import select, delete
 
 

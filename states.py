@@ -20,16 +20,6 @@ class SimpleSearch(StatesGroup):
     price_limit = State()
 
 
-class ComplexSearch(StatesGroup):
-    segment_from = State()
-    segment_to = State()
-    segment_date = State()
-    add_segment = State()
-
-    baggage = State()
-    transfers = State()
-    price_limit = State()
-
 class HotTickets(StatesGroup):
     from_city = State()
     to_city = State()

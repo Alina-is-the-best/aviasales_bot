@@ -5,22 +5,13 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
 
-import complex_search
-import keyboards
+from keyboards import keyboards
 import search
-<<<<<<< Updated upstream
-import hot
-import tickets
-import settings
-=======
+
 from handlers import settings, tracked, complex_search
 from handlers import tickets, back, help, hot
 from data.db import engine, Base
->>>>>>> Stashed changes
 from config import TOKEN
-import help
-import tracked
-import back
 
 
 async def main():

@@ -1,6 +1,6 @@
 from aiogram import Router, types, F
-import keyboards
-import tracked_repository as repo
+from keyboards import keyboards
+from repo import tracked_repository as repo
 
 router = Router()
 
@@ -8,17 +8,17 @@ def register(dp):
     dp.include_router(router)
 
 
-# --------------------- Открытие раздела ---------------------
+# Открытие раздела
 @router.message(F.text == "Отслеживаемые билеты")
 async def tracked_main(msg: types.Message):
     tickets = await repo.get_tracked(msg.from_user.id)
 
-    # --- если пусто — отправляем ТОЛЬКО одно сообщение ---
+    # если пусто отправляем одно сообщение
     if not tickets:
         await msg.answer("У вас пока нет отслеживаемых билетов.")
-        return  # важно! ничего дальше не выполняется
+        return
 
-    # --- если есть билеты ---
+    # если есть билеты
     text = "Ваши отслеживаемые билеты:\n\n"
     for i, t in enumerate(tickets, 1):
         if t.date_to:
@@ -38,8 +38,8 @@ async def tracked_main(msg: types.Message):
         reply_markup=keyboards.tracked_add_button()
     )
 
-# --------------------- Добавление билета ---------------------
-# Эту функцию вызываем ИЗ ПОИСКА после формирования маршрута
+# Добавление билета
+# Эту функцию вызываем из поиска после формирования маршрута
 async def add_tracked_ticket(msg: types.Message, user_id: int, data: dict):
 
     if data.get("dates"):
@@ -65,7 +65,7 @@ async def add_tracked_ticket(msg: types.Message, user_id: int, data: dict):
     await msg.answer("Билет добавлен в отслеживаемые 👀", reply_markup=keyboards.main_menu())
 
 
-# --------------------- Просмотр билета ---------------------
+# Просмотр билета
 @router.callback_query(F.data.startswith("track_"))
 async def tracked_ticket_details(callback: types.CallbackQuery):
     index = int(callback.data.split("_")[1]) - 1
@@ -89,7 +89,7 @@ async def tracked_ticket_details(callback: types.CallbackQuery):
     await callback.answer()
 
 
-# --------------------- Удаление ---------------------
+# Удаление
 @router.callback_query(F.data.startswith("track_delete_"))
 async def tracked_delete(callback: types.CallbackQuery):
     ticket_id = int(callback.data.split("_")[3])

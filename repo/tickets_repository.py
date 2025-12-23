@@ -1,4 +1,4 @@
-from db import Ticket, async_session
+from data.db import Ticket, async_session
 from sqlalchemy import select, delete
 
 
