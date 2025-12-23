@@ -1,3 +1,5 @@
+import asyncio
+from datetime import datetime
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 from datetime import datetime
@@ -5,244 +7,78 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 import keyboards
 from states import SimpleSearch
+<<<<<<< Updated upstream
 from calendar_kb import build_calendar
 import filters_repository as filters_repo
 from parser.aviasales_api import parse_flights
 from city_codes import get_city_code
 from datetime import datetime, timedelta
+=======
+from keyboards.calendar_kb import build_calendar
+from repo import filters_repository as filters_repo
+from api.aviasales_api import parse_flights
+from data.city_codes import get_city_code
+from utils.utils import format_date_for_api, format_one_way_ticket, format_round_trip_ticket
+>>>>>>> Stashed changes
 
 router = Router()
-
 
 def register(dp):
     dp.include_router(router)
 
-# Глобальное хранилище последнего поиска (для кнопки добавления)
+# Глобальная переменная для кнопки "отслеживать"
 last_search_data = {}
 
-# Добавьте эту функцию после импортов, но перед основной логикой
-async def debug_api_response(result):
-    """Функция для отладки ответа API"""
-    print("=== DEBUG API RESPONSE ===")
-    print(f"Has error: {result.get('error')}")
-    print(f"Has data: {bool(result.get('data'))}")
-    
-    if result.get('data'):
-        data = result['data']
-        print(f"Data type: {type(data)}")
-        print(f"Data keys: {list(data.keys())[:5] if isinstance(data, dict) else 'Not a dict'}")
-        
-        if isinstance(data, dict):
-            # Посмотрим на первый элемент
-            for key, value in list(data.items())[:1]:
-                print(f"First item key: {key}")
-                print(f"First item value type: {type(value)}")
-                if isinstance(value, dict):
-                    print(f"First item value keys: {list(value.keys())}")
-    print("=== END DEBUG ===")
+# --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (Logic Layer) ---
 
-# --------------------------------------------------------------
-# Применение фильтров к результатам API
-# --------------------------------------------------------------
-async def apply_filters_to_flights(flights_data, filters, user_filters):
-    """Применяет фильтры к найденным рейсам (обновленная для v3 API)"""
+async def filter_flights(flights: list, state_data: dict, user_filters) -> list:
+    """Фильтрует список билетов согласно настройкам пользователя и стейту."""
+    filtered = []
     
-    # Проверяем тип данных
-    print(f"=== APPLY FILTERS DEBUG ===")
-    print(f"flights_data type: {type(flights_data)}")
-    
-    # Обработка разных форматов API
-    
-    # 1. Если это список (новый v3 API формат)
-    if isinstance(flights_data, list):
-        print(f"Processing V3 API format (list with {len(flights_data)} items)")
-        filtered_flights = []
-        
-        for flight in flights_data:
-            if not isinstance(flight, dict):
+    # Определяем лимиты (приоритет: данные поиска > сохраненные фильтры)
+    limit_price = state_data.get('price_limit') or (user_filters.price_limit if user_filters else None)
+    req_baggage = state_data.get('baggage') or (user_filters.baggage if user_filters else None)
+    req_transfers = state_data.get('transfers') or (user_filters.transfers if user_filters else None)
+
+    for f in flights:
+        # 1. Фильтр цены
+        price = f.get('price', f.get('value', 0))
+        if limit_price and int(limit_price) > 0:
+            if price > int(limit_price):
                 continue
-            
-            # Проверяем фильтры
-            skip = False
-            
-            # Фильтр по цене (постоянные фильтры пользователя)
-            if user_filters.price_limit and user_filters.price_limit.isdigit():
-                price_limit = int(user_filters.price_limit)
-                flight_price = flight.get('value', flight.get('price', float('inf')))
-                if flight_price > price_limit:
-                    skip = True
-            
-            # Фильтр по цене (фильтры текущего поиска)
-            if not skip and filters.get('price_limit') and str(filters.get('price_limit')).isdigit():
-                price_limit = int(filters.get('price_limit'))
-                flight_price = flight.get('value', flight.get('price', float('inf')))
-                if flight_price > price_limit:
-                    skip = True
-            
-            # Фильтр по пересадкам
-            # В endpoint "dates" поле называется number_of_changes
-            # В endpoint "latest" поле называется transfers
-            transfers = flight.get('number_of_changes', flight.get('transfers', 0))
-            
-            # Проверяем постоянный фильтр пересадок
-            if user_filters.transfers == "Только прямой рейс" and transfers > 0:
-                skip = True
-                
-            # Проверяем фильтр текущего поиска
-            if not skip and filters.get('transfers') == "Только прямой" and transfers > 0:
-                skip = True
-            
-            if not skip:
-                filtered_flights.append(flight)
-        
-        print(f"After filtering: {len(filtered_flights)} flights")
-        return filtered_flights
-    
-    # 2. Если это словарь (старый v1 API формат)
-    elif isinstance(flights_data, dict):
-        print(f"Processing V1 API format (dict)")
-        filtered_flights = []
-        
-        for destination, flights_dict in flights_data.items():
-            if not isinstance(flights_dict, dict):
-                continue
-            
-            for flight_key, flight in flights_dict.items():
-                if not isinstance(flight, dict):
-                    continue
-                
-                # Проверяем фильтры (старая логика)
-                skip = False
-                
-                # Фильтр по цене (постоянные фильтры пользователя)
-                if user_filters.price_limit and user_filters.price_limit.isdigit():
-                    price_limit = int(user_filters.price_limit)
-                    flight_price = flight.get('price', float('inf'))
-                    if flight_price > price_limit:
-                        skip = True
-                
-                # Фильтр по цене (фильтры текущего поиска)
-                if not skip and filters.get('price_limit') and str(filters.get('price_limit')).isdigit():
-                    price_limit = int(filters.get('price_limit'))
-                    flight_price = flight.get('price', float('inf'))
-                    if flight_price > price_limit:
-                        skip = True
-                
-                # Фильтр по пересадкам (в старом API может быть поле 'transfers')
-                transfers = flight.get('transfers', 0)
-                
-                if user_filters.transfers == "Только прямой рейс" and transfers > 0:
-                    skip = True
-                    
-                if not skip and filters.get('transfers') == "Только прямой" and transfers > 0:
-                    skip = True
-                
-                if not skip:
-                    flight['destination_code'] = destination
-                    filtered_flights.append(flight)
-        
-        print(f"After filtering: {len(filtered_flights)} flights")
-        return filtered_flights
-    
-    # 3. Если это другой формат (например, словарь с ключом 'data')
-    elif isinstance(flights_data, dict) and 'data' in flights_data:
-        print(f"Processing dict with 'data' key")
-        # Рекурсивно вызываем для содержимого 'data'
-        return await apply_filters_to_flights(flights_data['data'], filters, user_filters)
-    
-    # 4. Неизвестный формат
-    else:
-        print(f"Unknown flights_data format: {type(flights_data)}")
-        return []
 
+        # 2. Фильтр пересадок
+        transfers = f.get('transfers', f.get('number_of_changes', 0))
+        if req_transfers == 'direct' and transfers > 0:
+            continue
+        if req_transfers == '1_stop' and transfers > 1:
+            continue
 
-# --------------------------------------------------------------
-# Финальный шаг поиска туда с парсингом
-# --------------------------------------------------------------
+        # 3. Фильтр багажа (API Aviasales в бесплатной версии не всегда дает данные о багаже точно,
+        # но если поле есть, используем его)
+        # has_baggage = f.get('has_baggage', True) 
+        # Здесь логика зависит от того, что возвращает API. Оставим заглушку пока.
+        
+        filtered.append(f)
+    
+    return filtered
 
-async def finish_search_one_way(msg: types.Message, state: FSMContext):
-    """Завершает поиск для маршрута 'В одну сторону'"""
+async def update_calendar_view(callback: types.CallbackQuery, state: FSMContext):
+    """Обновляет сообщение с календарем (DRY для prev/next)."""
+    _, y, m = callback.data.split("_")
+    y, m = int(y), int(m)
+    
     data = await state.get_data()
+    min_date = None
     
-    # Отладочный вывод
-    print(f"=== ONE-WAY DEBUG ===")
-    print(f"Data keys: {list(data.keys())}")
-    print(f"dates: {data.get('dates')}")
-    
-    # Сохраняем данные для кнопки
-    global last_search_data
-    last_search_data = data.copy()
-    last_search_data['trip_type'] = 'one_way'
-    
-    # Получаем постоянные фильтры пользователя
-    user_filters = await filters_repo.get_filters(msg.from_user.id)
-    
-    # Получаем коды городов
-    from_city_code = get_city_code(data['from_city'])
-    to_city_code = get_city_code(data['to_city'])
-    
-    # Получаем дату вылета
-    depart_date = data.get("dates")
-    if not depart_date:
-        await msg.answer("❌ Ошибка: не найдена дата вылета.")
-        await state.clear()
-        return
-    
-    # Форматируем дату для API
-    try:
-        day, month, year = depart_date.split('.')
-        # Добавляем ведущие нули: "2" → "02", "1" → "01"
-        api_date = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
-        last_search_data['api_date'] = api_date
-        print(f"Форматированная дата для API: {api_date}")
-    except Exception as e:
-        await msg.answer(f"❌ Ошибка формата даты: {depart_date}")
-        print(f"Ошибка форматирования даты: {e}")
-        await state.clear()
-        return
-    
-    # Для one-way используем endpoint "latest" (v3 API)
-    endpoint = "latest"
-    
-    await msg.answer(f"🔍 Ищу билеты {data['from_city']} → {data['to_city']} на {depart_date}...")
-    
-    try:
-        # Вызываем API для one-way (v3 API)
-        result = await parse_flights(
-            origin=from_city_code,
-            destination=to_city_code,
-            depart_date=api_date,
-            currency="RUB",
-            endpoint=endpoint
-        )
-        
-        print(f"=== API RESULT FOR {endpoint} ===")
-        print(f"Has error: {result.get('error')}")
-        
-        if result.get("error"):
-            await msg.answer(f"❌ Ошибка API: {result['error']}")
-            await state.clear()
-            return
-            
-        # Получаем данные о рейсах
-        raw_flights = result.get("data", {})
-        
-        print(f"=== PROCESSING API DATA ===")
-        print(f"raw_flights type: {type(raw_flights)}")
-        if isinstance(raw_flights, dict):
-            print(f"raw_flights keys: {list(raw_flights.keys())}")
-        
-        if not raw_flights:
-            await msg.answer("❌ Билеты по вашему запросу не найдены в API.")
-            await state.clear()
-            return
-        
-        # Применяем фильтры (возможно, нужно обновить эту функцию для v3 API)
-        filtered_flights = await apply_filters_to_flights(raw_flights, data, user_filters)
-        
-        # Применяем фильтры
-        filtered_flights = await apply_filters_to_flights(raw_flights, data, user_filters)
+    # Если выбираем дату возврата, блокируем дни до даты вылета
+    if "depart_date" in data and data["depart_date"]:
+        try:
+            min_date = datetime.strptime(data["depart_date"], "%d.%m.%Y")
+        except ValueError:
+            min_date = None
 
+<<<<<<< Updated upstream
         print(f"After filtering: {len(filtered_flights)} flights")
 
         if not filtered_flights:
@@ -694,397 +530,179 @@ async def choose_route_type(msg: types.Message):
     await msg.answer(
         "Выберите тип маршрута:",
         reply_markup=keyboards.route_type_menu()
+=======
+    await callback.message.edit_reply_markup(
+        reply_markup=build_calendar(y, m, min_date=min_date)
+>>>>>>> Stashed changes
     )
+    await callback.answer()
 
 
-# ------------------------------------------------
-# ПРОСТОЙ МАРШРУТ — ШАГИ
-# ------------------------------------------------
+# --- ХЕНДЛЕРЫ (Presentation Layer) ---
 
-# 1. ОТКУДА
-@router.message(F.text == "Простой маршрут")
-async def simple_start(msg: types.Message, state: FSMContext):
-
-    filters = await filters_repo.get_filters(msg.from_user.id)
-
-    # если есть постоянный фильтр — пропускаем вопрос
-    if filters.from_city:
-        await state.update_data(from_city=filters.from_city)
-        await state.set_state(SimpleSearch.to_city)
-        return await msg.answer(
-            f"Город вылета установлен по фильтру: {filters.from_city}\nВведите город прилёта:",
-            reply_markup=keyboards.back_to_main()
-        )
-
-    # иначе спрашиваем пользователя
+@router.message(F.text == "Найти билеты")
+async def start_search(msg: types.Message, state: FSMContext):
     await state.set_state(SimpleSearch.from_city)
-    await msg.answer("Введите город вылета:", reply_markup=keyboards.back_to_main())
-
+    await msg.answer("🛫 Откуда вылетаем?", reply_markup=keyboards.back_to_main())
 
 @router.message(SimpleSearch.from_city)
-async def simple_from(msg: types.Message, state: FSMContext):
+async def select_origin(msg: types.Message, state: FSMContext):
     if msg.text == "⬅️ Назад в меню":
         await state.clear()
-        return await msg.answer("Главное меню:", reply_markup=keyboards.main_menu())
+        return await msg.answer("Меню", reply_markup=keyboards.main_menu())
 
-    await state.update_data(from_city=msg.text)
+    code = get_city_code(msg.text)
+    if not code:
+        return await msg.answer("❌ Город не найден. Попробуйте снова.")
+
+    await state.update_data(from_city=msg.text, from_code=code)
     await state.set_state(SimpleSearch.to_city)
-    await msg.answer("Введите город прилёта:", reply_markup=keyboards.back_to_main())
+    await msg.answer(f"Куда летим из {msg.text}?")
 
-
-# 2. КУДА
 @router.message(SimpleSearch.to_city)
-async def simple_to(msg: types.Message, state: FSMContext):
-    if msg.text == "⬅️ Назад в меню":
-        await state.clear()
-        return await msg.answer("Главное меню:", reply_markup=keyboards.main_menu())
+async def select_destination(msg: types.Message, state: FSMContext):
+    code = get_city_code(msg.text)
+    if not code:
+        return await msg.answer("❌ Город не найден.")
 
-    await state.update_data(to_city=msg.text)
+    await state.update_data(to_city=msg.text, to_code=code)
     await state.set_state(SimpleSearch.trip_type)
-    await msg.answer(
-        "Выберите тип маршрута:",
-        reply_markup=keyboards.trip_type_kb()
-    )
+    await msg.answer("Как полетим?", reply_markup=keyboards.trip_type_kb())
 
-
-# 3. ONE-WAY или ROUND-TRIP
 @router.message(SimpleSearch.trip_type)
-async def simple_trip_type(msg: types.Message, state: FSMContext):
-    if msg.text == "⬅️ Назад в меню":
-        await state.clear()
-        return await msg.answer("Главное меню:", reply_markup=keyboards.main_menu())
-
-    trip = msg.text.lower()
-    if trip not in ["в одну сторону", "туда-обратно"]:
-        return await msg.answer("Выберите вариант из кнопок.")
-
-    await state.update_data(trip_type=trip)
-
-    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    now = datetime.now()
-
-    # One Way
-    if trip == "в одну сторону":
+async def select_trip_type(msg: types.Message, state: FSMContext):
+    if msg.text == "В одну сторону":
+        await state.update_data(trip_type="one_way")
         await state.set_state(SimpleSearch.dates)
-        return await msg.answer(
-            "Выберите дату вылета:",
-            reply_markup=build_calendar(now.year, now.month, min_date=today)
-        )
-
-    # Round Trip
-    await state.set_state(SimpleSearch.depart_date)
-    await msg.answer(
-        "Выберите дату вылета:",
-        reply_markup=build_calendar(now.year, now.month, min_date=today)
-    )
-
-
-# ------------------------------------------------
-# ONE-WAY ДАТА
-# ------------------------------------------------
-@router.callback_query(F.data.startswith("date_"), SimpleSearch.dates)
-async def choose_oneway_date(callback: types.CallbackQuery, state: FSMContext):
-
-    _, y, m, d = callback.data.split("_")
-    date_str = f"{d}.{m}.{y}"
-
-    await state.update_data(dates=date_str)
-
-    # проверяем фильтры
-    filters = await filters_repo.get_filters(callback.from_user.id)
-
-    # если есть фильтр багаж — пропускаем вопрос
-    if filters.baggage:
-        await state.update_data(baggage=filters.baggage)
-        await callback.message.answer(f"Багаж: {filters.baggage} (по фильтру)")
-        await state.set_state(SimpleSearch.transfers)
-
-        # если есть фильтр пересадок — пропускаем
-        if filters.transfers:
-            await state.update_data(transfers=filters.transfers)
-            await callback.message.answer(f"Пересадки: {filters.transfers} (по фильтру)")
-            return await ask_price_or_skip(callback.message, state, filters)
-
-        return await callback.message.answer(
-            "Тип пересадок:",
-            reply_markup=keyboards.transfers_kb()
-        )
-
-    # иначе задаём вопрос
-    await state.set_state(SimpleSearch.baggage)
-    await callback.message.answer(
-        f"Дата выбрана: {date_str}\nВыберите багаж:",
-        reply_markup=keyboards.baggage_kb()
-    )
-    await callback.answer()
-
-
-# ------------------------------------------------
-# ROUND TRIP: ДАТА ВЫЛЕТА
-# ------------------------------------------------
-@router.callback_query(F.data.startswith("date_"), SimpleSearch.depart_date)
-async def choose_depart_date(callback: types.CallbackQuery, state: FSMContext):
-
-    _, y, m, d = callback.data.split("_")
-    depart = f"{d}.{m}.{y}"
-
-    await state.update_data(depart_date=depart)
+    elif msg.text == "Туда-обратно":
+        await state.update_data(trip_type="round_trip")
+        await state.set_state(SimpleSearch.depart_date)
+    else:
+        return await msg.answer("Выберите вариант на клавиатуре.")
 
     now = datetime.now()
-    min_date = datetime.strptime(depart, "%d.%m.%Y")
+    await msg.answer("📅 Выберите дату вылета:", reply_markup=build_calendar(now.year, now.month))
 
-    await state.set_state(SimpleSearch.return_date)
-    await callback.message.answer(
-        f"Дата вылета выбрана: {depart}\nТеперь выберите дату возвращения:",
-        reply_markup=build_calendar(now.year, now.month, min_date=min_date)
-    )
+# Единый обработчик навигации календаря (вместо двух огромных функций)
+@router.callback_query(F.data.startswith("prev_"))
+@router.callback_query(F.data.startswith("next_"))
+async def calendar_navigation(callback: types.CallbackQuery, state: FSMContext):
+    await update_calendar_view(callback, state)
+
+# Обработка выбора даты
+@router.callback_query(F.data.startswith("date_"))
+async def date_selection(callback: types.CallbackQuery, state: FSMContext):
+    _, year, month, day = callback.data.split("_")
+    selected_date = f"{day.zfill(2)}.{month.zfill(2)}.{year}"
+    
+    current_state = await state.get_state()
+    
+    # 1. ONE WAY
+    if current_state == SimpleSearch.dates:
+        await state.update_data(dates=selected_date)
+        await finish_search_one_way(callback.message, state)
+    
+    # 2. ROUND TRIP - Вылет
+    elif current_state == SimpleSearch.depart_date:
+        await state.update_data(depart_date=selected_date)
+        await state.set_state(SimpleSearch.return_date)
+        
+        # Показываем календарь снова для обратной даты
+        dt = datetime.strptime(selected_date, "%d.%m.%Y")
+        await callback.message.edit_text(f"Вылет: {selected_date}.\n📅 Выберите дату возвращения:")
+        await callback.message.edit_reply_markup(
+            reply_markup=build_calendar(dt.year, dt.month, min_date=dt)
+        )
+    
+    # 3. ROUND TRIP - Возврат
+    elif current_state == SimpleSearch.return_date:
+        await state.update_data(return_date=selected_date)
+        await finish_search_round_trip(callback.message, state)
+    
     await callback.answer()
 
+# --- ФИНАЛЬНЫЕ ФУНКЦИИ (Business Logic Integration) ---
 
-# ------------------------------------------------
-# ROUND TRIP: ДАТА ВОЗВРАЩЕНИЯ
-# ------------------------------------------------
-@router.callback_query(F.data.startswith("date_"), SimpleSearch.return_date)
-async def choose_return_date(callback: types.CallbackQuery, state: FSMContext):
-
-    _, y, m, d = callback.data.split("_")
-    return_date = f"{d}.{m}.{y}"
-
+async def finish_search_one_way(msg: types.Message, state: FSMContext):
     data = await state.get_data()
-    depart = data["depart_date"]
-
-    await state.update_data(return_date=return_date)
-
-    await callback.message.answer(
-        f"Маршрут выбран:\nТуда: {depart}\nОбратно: {return_date}"
+    api_date = format_date_for_api(data['dates'])
+    
+    await msg.answer(f"🔎 Ищу билеты {data['from_city']} → {data['to_city']} на {data['dates']}...")
+    
+    # Вызов API
+    result = await parse_flights(
+        origin=data['from_code'],
+        destination=data['to_code'],
+        depart_date=api_date,
+        endpoint="latest"
     )
-
-    filters = await filters_repo.get_filters(callback.from_user.id)
-
-    # BAGGAGE FILTER?
-    if filters.baggage:
-        await state.update_data(baggage=filters.baggage)
-        await callback.message.answer(f"Багаж: {filters.baggage} (по фильтру)")
-
-        # TRANSFERS FILTER?
-        if filters.transfers:
-            await state.update_data(transfers=filters.transfers)
-            await callback.message.answer(f"Пересадки: {filters.transfers} (по фильтру)")
-            return await ask_price_or_skip(callback.message, state, filters)
-
-        await state.set_state(SimpleSearch.transfers)
-        return await callback.message.answer(
-            "Тип пересадок:",
-            reply_markup=keyboards.transfers_kb()
-        )
-
-    # иначе задаём вопрос
-    await state.set_state(SimpleSearch.baggage)
-    await callback.message.answer(
-        "Выберите багаж:",
-        reply_markup=keyboards.baggage_kb()
-    )
-    await callback.answer()
-
-
-# ------------------------------------------------
-# ФУНКЦИЯ ПРОВЕРКИ ЦЕНОВОГО ФИЛЬТРА
-# ------------------------------------------------
-async def ask_price_or_skip(msg: types.Message, state: FSMContext, filters):
-    if filters.price_limit:
-        await state.update_data(price_limit=filters.price_limit)
-        await msg.answer(f"Цена: до {filters.price_limit}₽ (по фильтру)")
-        
-        # Определяем тип маршрута и вызываем соответствующую функцию
-        data = await state.get_data()
-        trip_type = data.get('trip_type', '').lower()
-        
-        if 'в одну сторону' in trip_type:
-            return await finish_search_one_way(msg, state)
-        else:
-            return await finish_search_round_trip(msg, state)
-
-    await state.set_state(SimpleSearch.price_limit)
-    return await msg.answer(
-        "Введите ограничение по цене:",
-        reply_markup=keyboards.back_to_main()
-    )
-
-# ------------------------------------------------
-# БАГАЖ
-# ------------------------------------------------
-@router.message(SimpleSearch.baggage)
-async def baggage_step(msg: types.Message, state: FSMContext):
-    if msg.text == "⬅️ Назад в меню":
-        await state.clear()
-        return await msg.answer(
-            "Главное меню:",
-            reply_markup=keyboards.main_menu()
-        )
     
-    await state.update_data(baggage=msg.text)
-    
-    # Показываем клавиатуру для выбора пересадок
-    await msg.answer(
-        "Тип пересадок:",
-        reply_markup=keyboards.transfers_kb()  # ← ВАЖНО: должна быть эта строка!
-    )
-    await state.set_state(SimpleSearch.transfers)
- 
+    if not result.get('data'):
+        await msg.answer("😔 Билеты не найдены.")
+        return await state.clear()
 
-# ------------------------------------------------
-# ПЕРЕСАДКИ
-# ------------------------------------------------
-@router.message(SimpleSearch.transfers)
-async def transfers_step(msg: types.Message, state: FSMContext):
-    print(f"=== DEBUG transfers_step ===")
-    print(f"Message text: {msg.text}")
-    print(f"Current state: {await state.get_state()}")
-    print(f"User ID: {msg.from_user.id}")
+    # Фильтрация
+    user_filters = await filters_repo.get_filters(msg.chat.id)
+    flights = await filter_flights(result['data'], data, user_filters)
     
-    if msg.text == "⬅️ Назад в меню":
-        print("Нажата кнопка 'Назад'")
-        await state.clear()
-        return await msg.answer(
-            "Главное меню:",
-            reply_markup=keyboards.main_menu()
-        )
-    
-    print(f"Выбран тип пересадок: {msg.text}")
-    await state.update_data(transfers=msg.text)
-    
-    # Проверяем фильтры пользователя
-    filters = await filters_repo.get_filters(msg.from_user.id)
-    print(f"User filters price_limit: {filters.price_limit}")
-    
-    if filters.price_limit:
-        print(f"Используем фильтр по цене: {filters.price_limit}")
-        await state.update_data(price_limit=filters.price_limit)
-        await msg.answer(f"Цена: до {filters.price_limit}₽ (по фильтру)")
-        
-        data = await state.get_data()
-        print(f"Data keys: {list(data.keys())}")
-        
-        if 'dates' in data:
-            print("Определен маршрут 'В одну сторону'")
-            await finish_search_one_way(msg, state)
-        elif 'depart_date' in data and 'return_date' in data:
-            print("Определен маршрут 'Туда-обратно'")
-            await finish_search_round_trip(msg, state)
-        else:
-            print("Не удалось определить тип маршрута")
-            await msg.answer("❌ Ошибка: не удалось определить тип маршрута.")
-            await state.clear()
-        return
-    
-    print("Запрашиваем ограничение по цене у пользователя")
-    await state.set_state(SimpleSearch.price_limit)
-    await msg.answer(
-        "Введите ограничение по цене:",
-        reply_markup=keyboards.back_to_main()
-    )
-    print("=== END DEBUG ===")
+    if not flights:
+        await msg.answer("❌ Нет билетов, подходящих под ваши фильтры.")
+        return await state.clear()
 
-# ------------------------------------------------
-# ЦЕНА — ФИНАЛ
-# ------------------------------------------------
-@router.message(SimpleSearch.price_limit)
-async def price_step(msg: types.Message, state: FSMContext):
-    await state.update_data(price_limit=msg.text)
+    # Сортировка и Вывод (Используем utils!)
+    flights.sort(key=lambda x: x.get('price', float('inf')))
     
-    # Определяем тип маршрута и вызываем соответствующую функцию
-    data = await state.get_data()
-    trip_type = data.get('trip_type', '').lower()
+    response = "🎫 **Найденные билеты:**\n\n"
+    for i, flight in enumerate(flights[:5], 1):
+        response += format_one_way_ticket(flight, data['from_city'], data['to_city'], i)
     
-    if 'в одну сторону' in trip_type:
-        await finish_search_one_way(msg, state)
-    else:
-        await finish_search_round_trip(msg, state)
-
-# ------------------------------------------------
-# ГЛОБАЛЬНЫЙ НАЗАД ДЛЯ ВСЕХ СОСТОЯНИЙ ПОИСКА
-# ------------------------------------------------
-
-@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.from_city)
-@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.to_city)
-@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.trip_type)
-@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.dates)
-@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.depart_date)
-@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.return_date)
-@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.baggage)
-@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.transfers)
-@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.price_limit)
-async def search_back(msg: types.Message, state: FSMContext):
+    await msg.answer(response, parse_mode="Markdown", disable_web_page_preview=True)
+    
+    # Сохраняем контекст для кнопки "Отслеживать"
+    global last_search_data
+    last_search_data = {**data, 'trip_type': 'one_way'}
+    await offer_tracking(msg)
     await state.clear()
-    await msg.answer("Главное меню:", reply_markup=keyboards.main_menu())
 
-# ------------------------------------------------
-# ПЕРЕЛИСТЫВАНИЕ КАЛЕНДАРЯ
-# ------------------------------------------------
-
-@router.callback_query(
-    F.data.startswith("prev_"),
-    SimpleSearch.dates
-)
-@router.callback_query(
-    F.data.startswith("prev_"),
-    SimpleSearch.depart_date
-)
-@router.callback_query(
-    F.data.startswith("prev_"),
-    SimpleSearch.return_date
-)
-async def prev_month(callback: types.CallbackQuery, state: FSMContext):
-
-    _, y, m = callback.data.split("_")
-    y = int(y)
-    m = int(m)
-
+async def finish_search_round_trip(msg: types.Message, state: FSMContext):
     data = await state.get_data()
+    date_there = format_date_for_api(data['depart_date'])
+    date_back = format_date_for_api(data['return_date'])
+    
+    await msg.answer("🔎 Ищу билеты туда-обратно...")
+    
+    # Параллельные запросы (Asyncio Gather)
+    task1 = parse_flights(data['from_code'], data['to_code'], date_there)
+    task2 = parse_flights(data['to_code'], data['from_code'], date_back)
+    
+    res_there, res_back = await asyncio.gather(task1, task2)
+    
+    if not res_there.get('data') or not res_back.get('data'):
+        await msg.answer("❌ Не удалось найти билеты в одну из сторон.")
+        return await state.clear()
 
-    # минимальная дата может быть None
-    min_date = None
-    if "depart_date" in data:
-        try:
-            min_date = datetime.strptime(data["depart_date"], "%d.%m.%Y")
-        except:
-            min_date = None
+    # Сортировка
+    flights_there = sorted(res_there['data'], key=lambda x: x.get('price', 0))[:3]
+    flights_back = sorted(res_back['data'], key=lambda x: x.get('price', 0))[:3]
+    
+    response = f"🎫 **Билеты {data['from_city']} ↔ {data['to_city']}:**\n\n"
+    count = 1
+    
+    for ft in flights_there:
+        for fb in flights_back:
+            if count > 3: break
+            response += format_round_trip_ticket(ft, fb, data['from_city'], data['to_city'], count)
+            count += 1
+            
+    await msg.answer(response, parse_mode="Markdown", disable_web_page_preview=True)
+    
+    global last_search_data
+    last_search_data = {**data, 'trip_type': 'round_trip'}
+    await offer_tracking(msg)
+    await state.clear()
 
-    await callback.message.edit_reply_markup(
-        reply_markup=build_calendar(y, m, min_date=min_date)
-    )
-    await callback.answer()
-
-
-@router.callback_query(
-    F.data.startswith("next_"),
-    SimpleSearch.dates
-)
-@router.callback_query(
-    F.data.startswith("next_"),
-    SimpleSearch.depart_date
-)
-@router.callback_query(
-    F.data.startswith("next_"),
-    SimpleSearch.return_date
-)
-async def next_month(callback: types.CallbackQuery, state: FSMContext):
-
-    _, y, m = callback.data.split("_")
-    y = int(y)
-    m = int(m)
-
-    data = await state.get_data()
-
-    # минимальная дата может быть None
-    min_date = None
-    if "depart_date" in data:
-        try:
-            min_date = datetime.strptime(data["depart_date"], "%d.%m.%Y")
-        except:
-            min_date = None
-
-    await callback.message.edit_reply_markup(
-        reply_markup=build_calendar(y, m, min_date=min_date)
-    )
-    await callback.answer()
+async def offer_tracking(msg: types.Message):
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔔 Отслеживать цену", callback_data="track_search")]
+    ])
+    await msg.answer("Хотите получать уведомления, если цена изменится?", reply_markup=kb)

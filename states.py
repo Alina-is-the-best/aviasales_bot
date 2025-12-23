@@ -32,7 +32,8 @@ class ComplexSearch(StatesGroup):
 
 class HotTickets(StatesGroup):
     from_city = State()
-
+    to_city = State()
+    depart_date = State()
 
 class ComplexSearch(StatesGroup):
     segments = State()  # список сегментов

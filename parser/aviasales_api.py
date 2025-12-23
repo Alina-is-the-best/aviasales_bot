@@ -1,5 +1,6 @@
 from .client import fetch_json
 from config import API_TOKEN
+import logging
 
 async def parse_flights(origin: str, destination: str, depart_date: str = None,
                         return_date: str = None, month: str = None, currency: str = "RUB", endpoint: str = "latest"):
@@ -16,16 +17,17 @@ async def parse_flights(origin: str, destination: str, depart_date: str = None,
             "token": API_TOKEN,
             "origin": origin.upper(),
             "destination": destination.upper(),
-            "departure_at": depart_date,
             "currency": currency,
             "sorting": "price",
-            "limit": 30,  # Ограничиваем количество результатов
-            # Для one-way билетов
+            "limit": 30,
             "one_way": "true",
-            # Можно добавить дополнительные параметры:
-            "market": "ru",  # Российский рынок
-            "locale": "ru",  # Русский язык
+            "market": "ru",
+            "locale": "ru",
         }
+        # Добавляем дату ТОЛЬКО если она передана (не None)
+        if depart_date:
+            params["departure_at"] = depart_date
+
     elif endpoint == "calendar":
         base_url = "https://api.travelpayouts.com/v2/prices/month-matrix"
         params = {
@@ -69,5 +71,5 @@ async def parse_flights(origin: str, destination: str, depart_date: str = None,
         return result
 
     except Exception as e:
-        print(f"API Error: {str(e)}")
-        return {"error": str(e), "data": {}}
+        logging.error(f"API Error: {e}")
+        return {"error": str(e), "data": []}
