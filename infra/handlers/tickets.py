@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 
 from keyboards import keyboards
 from states import TicketAdd
-from repo import tickets_repository as repo
+from models.repo import tickets_repository as repo
 
 router = Router()
 

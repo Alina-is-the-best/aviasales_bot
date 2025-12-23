@@ -1,5 +1,5 @@
 from .client import fetch_json
-from config import API_TOKEN
+from infra.config import API_TOKEN
 import logging
 
 async def parse_flights(origin: str, destination: str, depart_date: str = None,

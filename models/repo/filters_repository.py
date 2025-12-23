@@ -1,4 +1,4 @@
-from data.db import UserFilters, async_session
+from models.data.db import UserFilters, async_session
 from sqlalchemy import select
 
 

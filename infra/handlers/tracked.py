@@ -1,6 +1,6 @@
 from aiogram import Router, types, F
 from keyboards import keyboards
-from repo import tracked_repository as repo
+from models.repo import tracked_repository as repo
 
 router = Router()
 

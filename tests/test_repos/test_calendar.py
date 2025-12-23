@@ -1,5 +1,5 @@
 from datetime import datetime
-from keyboards.calendar_kb import build_calendar
+from infra.keyboards.calendar_kb import build_calendar
 
 def test_calendar_returns_inline_keyboard():
     """

@@ -3,13 +3,12 @@ from datetime import datetime
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
-from keyboards import keyboards
-from states import SimpleSearch
-from keyboards.calendar_kb import build_calendar
-from repo import filters_repository as filters_repo
-from api.aviasales_api import parse_flights
-from data.city_codes import get_city_code
+from infra.keyboards import keyboards
+from infra.states import SimpleSearch
+from infra.keyboards.calendar_kb import build_calendar
+from models.repo import filters_repository as filters_repo
+from adapters.api.aviasales_api import parse_flights
+from models.data.city_codes import get_city_code
 from utils.utils import format_date_for_api, format_one_way_ticket, format_round_trip_ticket
 
 router = Router()

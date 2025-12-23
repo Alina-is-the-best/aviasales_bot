@@ -1,5 +1,5 @@
 import pytest
-from repo import tracked_repository as repo
+from models.repo import tracked_repository as repo
 
 @pytest.mark.asyncio
 async def test_add_and_get_tracked_ticket_oneway():

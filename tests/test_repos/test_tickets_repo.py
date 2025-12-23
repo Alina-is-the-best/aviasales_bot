@@ -1,6 +1,6 @@
 import pytest
-from repo import tickets_repository as repo
-from data.db import async_session, Ticket
+from models.repo import tickets_repository as repo
+from models.data.db import async_session, Ticket
 from sqlalchemy import delete
 
 @pytest.mark.asyncio
