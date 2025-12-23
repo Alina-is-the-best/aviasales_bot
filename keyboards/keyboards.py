@@ -235,3 +235,12 @@ def filter_transfers_kb():
         ],
         resize_keyboard=True
     )
+
+def hot_dest_kb():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="🌍 Куда угодно")],
+            [KeyboardButton(text="⬅️ Назад в меню")]
+        ],
+        resize_keyboard=True
+    )

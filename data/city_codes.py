@@ -1,47 +1,47 @@
-"""
-Справочник кодов городов для Aviasales API
-"""
+import requests
+import json
 
-CITY_CODES = {
-    # Россия
+# Локальный справочник для мгновенного ответа (самые популярные)
+PRIMARY_CITY_CODES = {
     "москва": "MOW",
-    "москвы": "MOW",
-    "мск": "MOW",
-    "сочи": "AER",
-    "сочи": "AER",
     "санкт-петербург": "LED",
-    "питер": "LED",
-    "спб": "LED",
-    "казань": "KZN",
-    "екатеринбург": "SVX",
-    "новосибирск": "OVB",
-    "краснодар": "KRR",
-    "минск": "MSQ",
-    "киев": "KBP",
-    "астана": "NQZ",
-    "алматы": "ALA",
-    
-    # Международные
-    "лондон": "LON",
-    "париж": "PAR",
-    "берлин": "BER",
-    "нью-йорк": "NYC",
-    "дубай": "DXB",
-    "стамбул": "IST",
+    "сочи": "AER",
 }
 
 def get_city_code(city_name: str) -> str:
-    """Преобразует название города в IATA код"""
-    city_lower = city_name.lower().strip()
+    """
+    Получает IATA код города. 
+    Сначала ищет в локальном словаре, затем через Travelpayouts API.
+    """
+    city_name = city_name.lower().strip()
     
-    # Прямое совпадение
-    if city_lower in CITY_CODES:
-        return CITY_CODES[city_lower]
+    # 1. Проверяем локальный список (быстрый доступ)
+    if city_name in PRIMARY_CITY_CODES:
+        return PRIMARY_CITY_CODES[city_name]
+
+    # 2. Валидация символов
+    invalid_sym = r'~!@#$%^&*()_+={}[]\|:;"<>,.?/0123456789'
+    if any(char in invalid_sym for char in city_name):
+        return None
+
+    # 3. Запрос к API автодополнения
+    try:
+        url = f'https://autocomplete.travelpayouts.com/places2?locale=ru&types[]=city&term={city_name}'
+        response = requests.get(url, timeout=5)
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data and len(data) > 0:
+                # Берем код первого подходящего места
+                return data[0].get('code')
+    except Exception as e:
+        print(f"Ошибка при поиске кода города: {e}")
     
-    # Проверяем частичные совпадения
-    for key, code in CITY_CODES.items():
-        if key in city_lower or city_lower in key:
-            return code
-    
-    # Если не нашли - возвращаем как есть (может быть уже кодом)
-    return city_name.upper()
+    return None
+
+def get_city_name_by_code(code: str) -> str:
+    """Обратный поиск названия по коду (опционально)"""
+    for name, c in PRIMARY_CITY_CODES.items():
+        if c == code:
+            return name.capitalize()
+    return code

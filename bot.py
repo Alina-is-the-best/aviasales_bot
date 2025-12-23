@@ -7,12 +7,17 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from keyboards import keyboards
 import search
+
 from handlers import settings, tracked, complex_search
 from handlers import tickets, back, help, hot
+from data.db import engine, Base
 from config import TOKEN
 
 
 async def main():
+    # создает user_filters, которой не хватает
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     bot = Bot(
         token=TOKEN,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
