@@ -6,6 +6,9 @@ import keyboards
 from states import ComplexSearch
 from calendar_kb import build_calendar
 
+from parser.aviasales_api import parse_flights
+from city_codes import get_city_code
+
 router = Router()
 
 
@@ -222,26 +225,68 @@ async def complex_transfers(msg: types.Message, state: FSMContext):
 # ----------------------------------------------------------
 @router.message(ComplexSearch.price_limit)
 async def complex_price(msg: types.Message, state: FSMContext):
-
     if msg.text == "⬅️ Назад в меню":
         await state.clear()
         return await msg.answer("Главное меню:", reply_markup=keyboards.main_menu())
-
+    
     await state.update_data(price_limit=msg.text)
     data = await state.get_data()
-
+    
     segments = data["segments"]
-
-    text = "Ваш сложный маршрут ✈️:\n\n"
+    
+    # Формируем текст маршрута
+    text = "Ищу билеты по вашему маршруту ✈️:\n\n"
     for i, seg in enumerate(segments, 1):
         text += f"{i}. {seg['from']} → {seg['to']} | {seg['date']}\n"
-
+    
     text += (
         f"\nБагаж: {data['baggage']}\n"
         f"Пересадки: {data['transfers']}\n"
         f"Цена: до {data['price_limit']}₽"
     )
-
+    
     await msg.answer(text, reply_markup=keyboards.main_menu())
-
+    
+    # Ищем билеты для первого сегмента (как пример)
+    if segments:
+        first_segment = segments[0]
+        
+        try:
+            from_code = get_city_code(first_segment['from'])
+            to_code = get_city_code(first_segment['to'])
+            
+            result = await parse_flights(
+                origin=from_code,
+                destination=to_code,
+                depart_date=first_segment['date'],
+                currency="RUB",
+                endpoint="latest"
+            )
+            
+            if not result.get("error") and result.get("data"):
+                flights = result["data"]
+                
+                # Фильтруем по цене если есть ограничение
+                if data['price_limit'] and data['price_limit'].isdigit():
+                    price_limit = int(data['price_limit'])
+                    flights = {k: v for k, v in flights.items() 
+                             if isinstance(v, dict) and v.get('value', float('inf')) <= price_limit}
+                
+                if flights:
+                    flight_text = f"Найденные билеты для {first_segment['from']} → {first_segment['to']}:\n\n"
+                    
+                    for key, flight in list(flights.items())[:3]:
+                        flight_text += (
+                            f"• Цена: {flight.get('value', '?')}₽\n"
+                            f"  Авиакомпания: {flight.get('airline', 'Неизвестно')}\n"
+                            f"  Пересадки: {flight.get('transfers', '0')}\n\n"
+                        )
+                    
+                    await msg.answer(flight_text)
+                else:
+                    await msg.answer("❌ Билеты не найдены или не соответствуют фильтрам.")
+                    
+        except Exception as e:
+            await msg.answer(f"Ошибка при поиске: {str(e)}")
+    
     await state.clear()

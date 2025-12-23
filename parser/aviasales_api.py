@@ -1,30 +1,73 @@
-import os
-import aiohttp
-
-API_TOKEN = os.getenv("API_TOKEN")
-
-async def fetch_json(url, params):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url, params=params) as response:
-            if response.status == 200:
-                return await response.json()
-            else:
-                raise RuntimeError(f"Ошибка API: {response.status}")
+from .client import fetch_json
+from config import API_TOKEN
 
 async def parse_flights(origin: str, destination: str, depart_date: str = None,
-                        month: str = None, currency: str = "RUB", endpoint: str = "latest"):
+                        return_date: str = None, month: str = None, currency: str = "RUB", endpoint: str = "latest"):
     """
     Общий парсер рейсов.
-    - origin, destination — города
-    - depart_date — для latest
-    - month — для calendar
-    - currency — валюта
-    - endpoint — "latest" или "calendar"
     """
-    base_url = f"https://api.travelpayouts.com/v2/prices/{endpoint}"
-    params = {"origin": origin, "destination": destination, "currency": currency, "token": API_TOKEN}
-    if endpoint == "latest" and depart_date:
-        params["depart_date"] = depart_date
-    if endpoint == "calendar" and month:
-        params["month"] = month
-    return await fetch_json(base_url, params)
+    print(f"=== API CALL ===")
+    print(f"Origin: {origin}, Destination: {destination}")
+    print(f"Depart date: {depart_date}, Return date: {return_date}, Endpoint: {endpoint}")
+    
+    if endpoint == "latest":
+        base_url = "https://api.travelpayouts.com/aviasales/v3/prices_for_dates"
+        params = {
+            "token": API_TOKEN,
+            "origin": origin.upper(),
+            "destination": destination.upper(),
+            "departure_at": depart_date,
+            "currency": currency,
+            "sorting": "price",
+            "limit": 30,  # Ограничиваем количество результатов
+            # Для one-way билетов
+            "one_way": "true",
+            # Можно добавить дополнительные параметры:
+            "market": "ru",  # Российский рынок
+            "locale": "ru",  # Русский язык
+        }
+    elif endpoint == "calendar":
+        base_url = "https://api.travelpayouts.com/v2/prices/month-matrix"
+        params = {
+            "token": API_TOKEN,
+            "origin": origin.upper(),
+            "destination": destination.upper(),
+            "month": month,
+            "currency": currency,
+        }
+    elif endpoint == "dates":
+        base_url = "https://api.travelpayouts.com/v2/prices/week-matrix"
+        params = {
+            "token": API_TOKEN,
+            "origin": origin.upper(),
+            "destination": destination.upper(),
+            "depart_date": depart_date,
+            "return_date": return_date,
+            "currency": currency,
+        }
+    else:
+        return {"error": f"Unknown endpoint: {endpoint}", "data": {}}
+    
+    print(f"URL: {base_url}")
+    print(f"Params: {params}")
+    
+    try:
+        result = await fetch_json(base_url, params)
+        print(f"API Response received, type: {type(result)}")
+        
+        # ОТЛАДКА: выводим структуру ответа
+        print(f"=== API RESPONSE STRUCTURE ===")
+        if isinstance(result, dict):
+            print(f"Result keys: {list(result.keys())}")
+            if 'data' in result:
+                data = result['data']
+                print(f"'data' type: {type(data)}")
+                if isinstance(data, list) and data:
+                    print(f"First item keys: {list(data[0].keys()) if isinstance(data[0], dict) else 'Not a dict'}")
+        print(f"=== END STRUCTURE ===")
+        
+        return result
+
+    except Exception as e:
+        print(f"API Error: {str(e)}")
+        return {"error": str(e), "data": {}}
