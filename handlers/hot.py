@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from keyboards import keyboards
 from states import HotTickets
 
-from parser.aviasales_api import parse_flights
+from api.aviasales_api import parse_flights
 from data.city_codes import get_city_code
 
 router = Router()

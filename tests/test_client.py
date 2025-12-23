@@ -1,8 +1,8 @@
 import pytest
 from aioresponses import aioresponses
 
-import parser.client as client
-from parser.exceptions import RateLimitError, ParseError
+import api.client as client
+from api.exceptions import RateLimitError, ParseError
 
 @pytest.mark.asyncio
 async def test_fetch_retry_and_success():
