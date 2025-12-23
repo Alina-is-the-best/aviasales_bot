@@ -10,7 +10,8 @@ async def get_tracked(user_id: int):
         return result.scalars().all()
 
 
-async def add_tracked(user_id: int, from_city, to_city, date_from, date_to, baggage, transfers, price_limit):
+async def add_tracked(user_id: int, from_city: str, to_city: str, date_from: str, 
+                     date_to: str, baggage: str, transfers: str, price_limit: str):
     async with async_session() as session:
         ticket = TrackedTicket(
             user_id=user_id,
