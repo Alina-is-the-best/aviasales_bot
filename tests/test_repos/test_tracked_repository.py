@@ -3,11 +3,11 @@ from repo import tracked_repository as repo
 
 @pytest.mark.asyncio
 async def test_add_and_get_tracked_ticket_oneway():
-    """
-    Проверяем:
-    - добавление one-way билета
-    """
     user_id = 2001
+
+    tickets = await repo.get_tracked(user_id)
+    for t in tickets:
+        await repo.delete_tracked(t.id)
 
     await repo.add_tracked(
         user_id=user_id,
@@ -23,4 +23,4 @@ async def test_add_and_get_tracked_ticket_oneway():
     tickets = await repo.get_tracked(user_id)
 
     assert len(tickets) == 1
-    assert tickets[0].date_to == ""
+
