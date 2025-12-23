@@ -13,7 +13,7 @@ def register(dp):
     dp.include_router(router)
 
 
-# Первый шаг — выбираем город
+# выбираем город
 @router.message(F.text == "Горячие билеты")
 async def hot_start(msg: types.Message, state: FSMContext):
     await state.set_state(HotTickets.from_city)
@@ -23,9 +23,8 @@ async def hot_start(msg: types.Message, state: FSMContext):
     )
 
 
-# Второй шаг — ловим введённый город
+# ловим введённый город
 @router.message(HotTickets.from_city)
-# Обновите функцию hot_city_received:
 async def hot_city_received(msg: types.Message, state: FSMContext):
     if msg.text == "⬅️ Назад в меню":
         await state.clear()
@@ -37,8 +36,6 @@ async def hot_city_received(msg: types.Message, state: FSMContext):
     await msg.answer(f"Ищу горячие билеты из: {user_city} ({city_code}) 🔥")
     
     try:
-        # Для горячих билетов ищем популярные направления
-        # Покажем несколько примерных направлений
         popular_destinations = ['LED', 'AER', 'KRR', 'KZN', 'SVX']  # СПб, Сочи, Краснодар, Казань, Екатеринбург
         
         response_text = f"🔥 Популярные направления из {user_city}:\n\n"
@@ -62,7 +59,7 @@ async def hot_city_received(msg: types.Message, state: FSMContext):
                                 departure = flight.get('departure_at', '?').split('T')[0] if flight.get('departure_at') else '?'
                                 
                                 # Получаем название города по коду
-                                dest_name = dest  # Можно добавить обратный словарь кодов
+                                dest_name = dest
                                 response_text += (
                                     f"• {user_city} → {dest_name}\n"
                                     f"  💰 От {price}₽\n"
