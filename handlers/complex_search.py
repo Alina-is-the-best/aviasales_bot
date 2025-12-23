@@ -2,12 +2,12 @@ from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 from datetime import datetime, timedelta
 
-import keyboards
+from keyboards import keyboards
 from states import ComplexSearch
-from calendar_kb import build_calendar
+from keyboards.calendar_kb import build_calendar
 
 from parser.aviasales_api import parse_flights
-from city_codes import get_city_code
+from data.city_codes import get_city_code
 
 router = Router()
 

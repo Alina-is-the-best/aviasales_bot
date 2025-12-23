@@ -1,6 +1,6 @@
 from aiogram import Router, F, types
 from aiogram.fsm.context import FSMContext
-import keyboards
+from keyboards import keyboards
 
 back_router = Router()
 

@@ -1,5 +1,5 @@
 from aiogram import Router, types, F
-import keyboards
+from keyboards import keyboards
 
 router = Router()
 

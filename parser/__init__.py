@@ -1,6 +1,6 @@
 from .aviasales_api import parse_flights
 from .client import fetch_json, close_session
-from city_codes import get_city_code
+from data.city_codes import get_city_code
 from .exceptions import ApiError, RateLimitError, ParseError
 
 __all__ = [

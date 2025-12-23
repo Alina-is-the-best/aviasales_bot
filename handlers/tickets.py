@@ -1,9 +1,9 @@
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 
-import keyboards
+from keyboards import keyboards
 from states import TicketAdd
-import tickets_repository as repo
+from repo import tickets_repository as repo
 
 router = Router()
 

@@ -1,12 +1,11 @@
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 
-import keyboards
+from keyboards import keyboards
 from states import HotTickets
 
 from parser.aviasales_api import parse_flights
-from city_codes import get_city_code
-from datetime import datetime
+from data.city_codes import get_city_code
 
 router = Router()
 

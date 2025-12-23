@@ -1,15 +1,14 @@
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
-from datetime import datetime
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-import keyboards
+from keyboards import keyboards
 from states import SimpleSearch
-from calendar_kb import build_calendar
-import filters_repository as filters_repo
+from keyboards.calendar_kb import build_calendar
+from repo import filters_repository as filters_repo
 from parser.aviasales_api import parse_flights
-from city_codes import get_city_code
-from datetime import datetime, timedelta
+from data.city_codes import get_city_code
+from datetime import datetime
 
 router = Router()
 
@@ -663,7 +662,7 @@ async def track_search_result(callback: types.CallbackQuery):
     
     try:
         # Импортируем здесь, чтобы избежать циклических импортов
-        from tracked_repository import add_tracked
+        from repo.tracked_repository import add_tracked
         
         # Определяем тип маршрута
         is_one_way = last_search_data.get('trip_type') == 'one_way'

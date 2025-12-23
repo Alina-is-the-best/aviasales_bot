@@ -6,7 +6,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
     from parser.aviasales_api import parse_flights
-    from city_codes import get_city_code
+    from data.city_codes import get_city_code
     print("✅ Импорт из parser успешен")
 except ImportError as e:
     print(f"❌ Ошибка импорта: {e}")

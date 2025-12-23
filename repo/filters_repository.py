@@ -1,6 +1,5 @@
-from db import UserFilters, async_session
+from data.db import UserFilters, async_session
 from sqlalchemy import select
-from sqlalchemy.exc import NoResultFound
 
 
 async def get_filters(user_id: int):
