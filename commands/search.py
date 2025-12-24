@@ -344,21 +344,49 @@ async def start_search(msg: types.Message, state: FSMContext):
 @router.message(F.text == "Простой маршрут")
 async def process_simple_route(msg: types.Message, state: FSMContext):
     await state.clear()
+
+    # ПРОВЕРЯЕМ ПОСТОЯННЫЕ ФИЛЬТРЫ ПОЛЬЗОВАТЕЛЯ
+    user_filters = await filters_repo.get_filters(msg.from_user.id)
+
+    # ЕСЛИ ЕСТЬ ФИЛЬТР ГОРОДА ВЫЛЕТА - ИСПОЛЬЗУЕМ ЕГО
+    if user_filters and user_filters.from_city:
+        code = get_city_code(user_filters.from_city)
+        if code:
+            await state.update_data(from_city=user_filters.from_city, from_code=code)
+            await state.set_state(SimpleSearch.to_city)
+
+            # ИНФОРМИРУЕМ ПОЛЬЗОВАТЕЛЯ
+            await msg.answer(
+                f"🛫 **Используется постоянный фильтр:** вылет из {user_filters.from_city}\n\n"
+                f"Куда летим из {user_filters.from_city}?",
+                reply_markup=keyboards.back_to_main()
+            )
+            return
+
+    # ЕСЛИ ФИЛЬТРА НЕТ - СПРАШИВАЕМ
     await state.set_state(SimpleSearch.from_city)
     await msg.answer(
-        "🛫 Откуда вылетаем?", 
+        "🛫 Откуда вылетаем?",
         reply_markup=keyboards.back_to_main()
     )
 
+
 @router.message(SimpleSearch.from_city)
 async def select_origin(msg: types.Message, state: FSMContext):
+    # Проверяем, не нажал ли пользователь "Назад в меню"
+    if msg.text == "⬅️ Назад в меню":
+        await state.clear()
+        return await msg.answer("Главное меню:", reply_markup=keyboards.main_menu())
+
     code = get_city_code(msg.text)
     if not code:
         return await msg.answer("❌ Город не найден. Попробуйте снова.")
+
     await state.update_data(from_city=msg.text, from_code=code)
     await state.set_state(SimpleSearch.to_city)
-    await msg.answer(f"Куда летим из {msg.text}?")
+    await msg.answer(f"🛫 Вылет из: {msg.text}\n\nКуда летим?")
 
+    
 @router.message(SimpleSearch.to_city)
 async def select_destination(msg: types.Message, state: FSMContext):
     code = get_city_code(msg.text)
