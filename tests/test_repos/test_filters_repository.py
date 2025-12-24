@@ -1,5 +1,5 @@
 import pytest
-from repo import filters_repository as repo
+from models.repo import filters_repository as repo
 
 @pytest.mark.asyncio
 async def test_create_filters_if_not_exists():

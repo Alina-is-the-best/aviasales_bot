@@ -5,8 +5,8 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
-    from api.aviasales_api import parse_flights
-    from data.city_codes import get_city_code
+    from adapters.api.aviasales_api import parse_flights
+    from models.data.city_codes import get_city_code
     print("✅ Импорт из api успешен")
 except ImportError as e:
     print(f"❌ Ошибка импорта: {e}")
