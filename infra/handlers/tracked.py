@@ -66,59 +66,47 @@ async def add_tracked_ticket(msg: types.Message, user_id: int, data: dict):
 
     await msg.answer("Билет добавлен в отслеживаемые 👀", reply_markup=keyboards.main_menu())
 
+@router.callback_query(F.data.startswith("track_delete_"))
+async def tracked_delete(callback: types.CallbackQuery):
+    try:
+        # Извлекаем ID, забирая последнюю часть строки
+        ticket_id = int(callback.data.split("_")[-1])
+        await repo.delete_tracked(ticket_id)
+        await callback.message.answer("Билет удалён из отслеживаемых.", reply_markup=keyboards.main_menu())
+    except Exception as e:
+        await callback.answer("Ошибка при удалении", show_alert=True)
+    await callback.answer()
 
 # Просмотр билета
 @router.callback_query(F.data.startswith("track_"))
 async def tracked_ticket_details(callback: types.CallbackQuery):
-    # Извлечение индекса билета из callback_data
     index = int(callback.data.split("_")[1]) - 1
     tickets = await repo.get_tracked(callback.from_user.id)
     ticket = tickets[index]
 
-    # Базовая информация о билете
-    text = f"📍 **Отслеживаемый билет:**\n{ticket.from_city} → {ticket.to_city}\n"
-    text += f"📅 Дата: {ticket.date_from}" + (f" — {ticket.date_to}" if ticket.date_to else "") + "\n"
-    text += f"💰 Лимит цены: {ticket.price_limit}₽\n\n"
+    text = f"📍 **Данные билета:**\n{ticket.from_city} → {ticket.to_city}\n"
+    text += f"📅 Дата: {ticket.date_from}\n"
+    text += f"💰 Ваш лимит: {ticket.price_limit}₽\n\n"
 
-    # ПОИСК АКТУАЛЬНОЙ ЦЕНЫ
-    await callback.answer("Проверяю актуальные цены... 🔎")
-    
+    # поиск самого дешевого билета
+    await callback.answer("Обновляю цену... 🔎")
     origin_code = get_city_code(ticket.from_city)
     dest_code = get_city_code(ticket.to_city)
     api_date = format_date_for_api(ticket.date_from)
 
     if origin_code and dest_code:
-        # Используем существующую функцию API
         result = await parse_flights(origin=origin_code, destination=dest_code, depart_date=api_date)
         flights = result.get('data', [])
-
         if flights:
-            # Находим самый дешевый вариант, как это делает логика в search.py
             cheapest = min(flights, key=lambda x: x.get('price', float('inf')))
-            text += "✅ **Самый дешевый вариант сейчас:**\n"
-            # Используем общую функцию форматирования
+            text += "✅ **Самый дешевый сейчас:**\n"
             text += format_one_way_ticket(cheapest, ticket.from_city, ticket.to_city)
         else:
-            text += "😔 К сожалению, билетов на эту дату сейчас не найдено."
-    else:
-        text += "⚠️ Не удалось обновить цену: ошибка в кодах городов."
+            text += "😔 Билетов на эту дату не найдено."
 
-    # Отправка сообщения с кнопкой удаления
     await callback.message.answer(
         text, 
         reply_markup=keyboards.tracked_delete_kb(ticket.id),
         parse_mode="Markdown"
     )
-
-# Удаление
-@router.callback_query(F.data.startswith("track_delete_"))
-async def tracked_delete(callback: types.CallbackQuery):
-    # Используем [-1], чтобы точно забрать ID из track_delete_{id}
-    try:
-        ticket_id = int(callback.data.split("_")[-1])
-        await repo.delete_tracked(ticket_id)
-        await callback.message.answer("Билет удалён из отслеживаемых.", reply_markup=keyboards.main_menu())
-    except Exception:
-        await callback.answer("Ошибка при удалении билета", show_alert=True)
-    
     await callback.answer()
