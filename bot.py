@@ -25,12 +25,12 @@ async def main():
     dp = Dispatcher(storage=MemoryStorage())
 
     # регистрация модулей
+    complex_search.register(dp)
     search.register(dp)
     hot.register(dp)
     tickets.register(dp)
     settings.register(dp)
     help.register(dp)
-    complex_search.register(dp)
     tracked.register(dp)
 
     dp.include_router(back.back_router)

@@ -65,7 +65,7 @@ def baggage_kb():
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="С багажом")],
-            [KeyboardButton(text="Как угодно")],
+            [KeyboardButton(text="Без багажа")],
             [KeyboardButton(text="⬅️ Назад в меню")],
         ],
         resize_keyboard=True
