@@ -39,7 +39,6 @@ async def tracked_main(msg: types.Message):
     )
 
 # Добавление билета
-# Эту функцию вызываем из поиска после формирования маршрута
 async def add_tracked_ticket(msg: types.Message, user_id: int, data: dict):
 
     if data.get("dates"):
@@ -97,3 +96,4 @@ async def tracked_delete(callback: types.CallbackQuery):
 
     await callback.message.answer("Билет удалён из отслеживаемых.", reply_markup=keyboards.main_menu())
     await callback.answer()
+
