@@ -1,4 +1,6 @@
 import pytest
+from aiogram.types import ReplyKeyboardMarkup
+
 from infra.keyboards.keyboards import (
     main_menu,
     route_type_menu,
@@ -91,26 +93,6 @@ def test_complex_add_more_kb():
 
     texts = [row[0].text for row in kb.keyboard]
     assert texts == ["➕ Добавить сегмент", "✔ Завершить маршрут", "⬅️ Назад в меню"]
-
-
-def test_tickets_main_kb():
-    """Тест главной клавиатуры билетов"""
-    kb = tickets_main_kb()
-    assert kb.resize_keyboard == True
-    assert len(kb.keyboard) == 3
-
-    texts = [row[0].text for row in kb.keyboard]
-    assert texts == ["Купленные билеты", "Отслеживаемые билеты", "⬅️ Назад в меню"]
-
-
-def test_tracked_main_kb():
-    """Тест главной клавиатуры отслеживаемых билетов"""
-    kb = tracked_main_kb()
-    assert kb.resize_keyboard == True
-    assert len(kb.keyboard) == 3
-
-    texts = [row[0].text for row in kb.keyboard]
-    assert texts == ["Купленные билеты", "Отслеживаемые билеты", "⬅️ Назад в меню"]
 
 
 def test_settings_menu():

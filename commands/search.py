@@ -386,7 +386,7 @@ async def select_origin(msg: types.Message, state: FSMContext):
     await state.set_state(SimpleSearch.to_city)
     await msg.answer(f"🛫 Вылет из: {msg.text}\n\nКуда летим?")
 
-    
+
 @router.message(SimpleSearch.to_city)
 async def select_destination(msg: types.Message, state: FSMContext):
     code = get_city_code(msg.text)

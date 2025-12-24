@@ -20,59 +20,6 @@ async def my_tickets_root(msg: types.Message):
         reply_markup=keyboards.tickets_main_kb()
     )
 
-
-# КУПЛЕННЫЕ БИЛЕТЫ
-@router.message(F.text == "Купленные билеты")
-async def purchased_tickets(msg: types.Message):
-    tickets = await repo.get_tickets(msg.from_user.id)
-
-    if not tickets:
-        await msg.answer(
-            "У вас пока нет купленных билетов.",
-        )
-
-        # Кнопка "Добавить билет"
-        await msg.answer(
-            "Добавьте первый билет:",
-            reply_markup=keyboards.add_ticket_button()
-        )
-
-        return
-
-    # формируем список
-    text = "Ваши билеты:\n\n"
-    for i, t in enumerate(tickets, 1):
-        text += (
-            f"{i}. {t.from_city} – {t.to_city}\n"
-            f"{t.date}\n\n"
-        )
-
-    # кнопки
-    await msg.answer(
-        text,
-        reply_markup=keyboards.add_ticket_button()
-    )
-
-    await msg.answer(
-        "Выберите билет:",
-        reply_markup=keyboards.tickets_numbers_kb(len(tickets))
-    )
-
-
-# ДОБАВИТЬ БИЛЕТ
-@router.callback_query(F.data == "ticket_add")
-async def add_ticket_start(callback: types.CallbackQuery, state: FSMContext):
-    await state.set_state(TicketAdd.waiting_for_data)
-
-    await callback.message.answer(
-        "Отправьте данные билета в формате:\n"
-        "`город вылета, город прибытия, дата`\n\n"
-        "Пример: `Москва, Сочи, 12.03.2025`",
-        parse_mode="Markdown"
-    )
-    await callback.answer()
-
-
 # ДОБАВЛЕНИЕ БИЛЕТА — FSM
 @router.message(TicketAdd.waiting_for_data)
 async def add_ticket_process(msg: types.Message, state: FSMContext):
