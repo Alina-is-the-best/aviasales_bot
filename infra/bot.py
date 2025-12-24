@@ -7,9 +7,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from infra.keyboards import keyboards
 from commands import search
-
-from infra.handlers import settings, tracked, complex_search
-from infra.handlers import tickets, back, help, hot
+from infra.handlers import tickets, back, help, hot, settings, tracked
 from models.data.db import engine, Base
 from infra.config import TOKEN
 
@@ -25,7 +23,6 @@ async def main():
     dp = Dispatcher(storage=MemoryStorage())
 
     # регистрация модулей
-    complex_search.register(dp)
     search.register(dp)
     hot.register(dp)
     tickets.register(dp)
