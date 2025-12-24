@@ -14,4 +14,12 @@
 - Что я умею: можно ознакомиться с возможностями бота.
 
 Инструкция по установке: чтобы установить этого бота на свой сервер, выполните следующие шаги:
-TO BE CONTINUED
+
+1. Клонируйте репозиторий:
+git clone https://github.com/Alina-is-the-best/aviasales_bot.git
+2. Перейдите в папку проекта:
+cd aviasales_bot
+3. Создайте файл .env на основе шаблона:
+Linux/macOS: cp .env.template .env
+Windows: copy .env.template .env
+4. 
