@@ -3,12 +3,14 @@ from datetime import datetime
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
 from infra.keyboards import keyboards
 from infra.states import SimpleSearch
 from infra.keyboards.calendar_kb import build_calendar
 from models.repo import filters_repository as filters_repo
 from adapters.api.aviasales_api import parse_flights
 from models.data.city_codes import get_city_code
+
 from utils.utils import format_date_for_api, format_one_way_ticket, format_round_trip_ticket
 
 router = Router()
@@ -18,6 +20,23 @@ def register(dp):
 
 # Глобальная переменная для быстрого сохранения последнего поиска
 last_search_data = {}
+
+@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.from_city)
+@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.to_city)
+@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.trip_type)
+@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.dates)
+@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.depart_date)
+@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.return_date)
+@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.baggage)
+@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.transfers)
+@router.message(F.text == "⬅️ Назад в меню", SimpleSearch.price_limit)
+async def back_to_menu_from_search(msg: types.Message, state: FSMContext):
+    """Обработка кнопки 'Назад в меню' во время поиска"""
+    await state.clear()
+    await msg.answer(
+        "Главное меню:",
+        reply_markup=keyboards.main_menu()
+    )
 
 # --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
 
@@ -60,8 +79,19 @@ async def update_calendar_view(callback: types.CallbackQuery, state: FSMContext)
 
 @router.message(F.text == "Найти билеты")
 async def start_search(msg: types.Message, state: FSMContext):
+    await state.clear() # Очищаем старые данные
+    await msg.answer(
+        "Выберите тип маршрута:", 
+        reply_markup=keyboards.route_type_menu() # Показываем кнопки Простой/Сложный
+    )
+
+@router.message(F.text == "Простой маршрут")
+async def process_simple_route(msg: types.Message, state: FSMContext):
     await state.set_state(SimpleSearch.from_city)
-    await msg.answer("🛫 Откуда вылетаем?", reply_markup=keyboards.back_to_main())
+    await msg.answer(
+        "🛫 Откуда вылетаем?", 
+        reply_markup=keyboards.back_to_main()
+    )
 
 @router.message(SimpleSearch.from_city)
 async def select_origin(msg: types.Message, state: FSMContext):
@@ -191,7 +221,7 @@ async def offer_tracking(msg: types.Message):
 
 @router.callback_query(F.data == "track_search")
 async def track_search_callback(callback: types.CallbackQuery):
-    from repo.tracked_repository import add_tracked
+    from models.repo.tracked_repository import add_tracked
     if not last_search_data:
         return await callback.answer("Ошибка: данные поиска устарели.")
     

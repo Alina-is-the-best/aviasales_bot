@@ -6,7 +6,7 @@ from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from infra.keyboards import keyboards
-import commands.search
+from commands import search
 
 from infra.handlers import settings, tracked, complex_search
 from infra.handlers import tickets, back, help, hot
@@ -25,12 +25,12 @@ async def main():
     dp = Dispatcher(storage=MemoryStorage())
 
     # регистрация модулей
-    commands.search.register(dp)
+    complex_search.register(dp)
+    search.register(dp)
     hot.register(dp)
     tickets.register(dp)
     settings.register(dp)
     help.register(dp)
-    complex_search.register(dp)
     tracked.register(dp)
 
     dp.include_router(back.back_router)
