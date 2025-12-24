@@ -27,6 +27,11 @@ def register(dp):
 # Глобальная переменная для быстрого сохранения последнего поиска
 last_search_data = {}
 
+@router.message(F.text == ".")
+async def dot_button(msg: types.Message):
+    """Обработчик кнопки с точкой - ничего не делает"""
+    # Просто игнорируем нажатие
+    pass
 # ================ ОБЩИЕ ФУНКЦИИ ================
 
 async def filter_flights(flights: list, state_data: dict, user_filters) -> list:
