@@ -7,7 +7,6 @@ def main_menu():
         keyboard=[
             [KeyboardButton(text="Горячие билеты")],
             [KeyboardButton(text="Найти билеты")],
-            [KeyboardButton(text=".")],
             [KeyboardButton(text="Мои билеты")],
             [KeyboardButton(text="Настройки")],
             [KeyboardButton(text="Что я умею")],
