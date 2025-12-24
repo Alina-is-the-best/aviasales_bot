@@ -36,21 +36,23 @@ async def dot_button(msg: types.Message):
 
 async def filter_flights(flights: list, state_data: dict, user_filters) -> list:
     """Фильтрует список билетов согласно настройкам пользователя."""
+    if not flights:
+        return []
+
     filtered = []
-    
-    # Безопасное получение limit_price
+
+    # 1. Получаем фильтр цены
     limit_price = None
     try:
-        # Сначала пробуем из state_data
+        # Сначала из текущего поиска
         price_limit_value = state_data.get('price_limit')
         if price_limit_value:
-            # Проверяем, что это число (не строка с текстом)
             if isinstance(price_limit_value, (int, float)):
                 limit_price = int(price_limit_value)
             elif isinstance(price_limit_value, str) and price_limit_value.isdigit():
                 limit_price = int(price_limit_value)
-        
-        # Если не нашли в state_data, пробуем из user_filters
+
+        # Если не нашли, берем из постоянных фильтров
         if limit_price is None and user_filters and user_filters.price_limit:
             filter_price = user_filters.price_limit
             if isinstance(filter_price, (int, float)):
@@ -59,22 +61,43 @@ async def filter_flights(flights: list, state_data: dict, user_filters) -> list:
                 limit_price = int(filter_price)
     except (ValueError, TypeError):
         limit_price = None
-    
-    req_transfers = state_data.get('transfers') or (user_filters.transfers if user_filters else None)
 
+    # 2. Получаем фильтр пересадок
+    req_transfers = state_data.get('transfers')
+    if not req_transfers and user_filters:
+        req_transfers = user_filters.transfers
+
+    # 3. Получаем фильтр багажа
+    req_baggage = state_data.get('baggage')
+    if not req_baggage and user_filters:
+        req_baggage = user_filters.baggage
+
+    # 4. Получаем фильтр города вылета (если нужен)
+    filter_from_city = None
+    if user_filters and user_filters.from_city:
+        filter_from_city = get_city_code(user_filters.from_city)
+
+    # 5. Применяем фильтры
     for f in flights:
         # Фильтр цены
         price = f.get('price', f.get('value', 0))
-        if limit_price is not None and limit_price > 0:
-            if price > limit_price: 
-                continue
+        if limit_price is not None and limit_price > 0 and price > limit_price:
+            continue
 
         # Фильтр пересадок
         transfers = f.get('transfers', f.get('number_of_changes', 0))
-        if req_transfers == 'Только прямой рейс' and transfers > 0: 
+        if req_transfers == 'Только прямой рейс' and transfers > 0:
             continue
-        
+
+        # Фильтр багажа
+        bags_included = f.get('bags_included', False)
+        if req_baggage == 'С багажом' and not bags_included:
+            continue
+        if req_baggage == 'Без багажа' and bags_included:
+            continue
+
         filtered.append(f)
+
     return filtered
 
 async def _calc_min_date_for_segment(state: FSMContext) -> datetime:
@@ -364,50 +387,95 @@ async def select_trip_type(msg: types.Message, state: FSMContext):
 async def finish_search_one_way(msg: types.Message, state: FSMContext):
     data = await state.get_data()
     api_date = format_date_for_api(data['dates'])
+
+    # ПОЛУЧАЕМ ФИЛЬТРЫ ПОЛЬЗОВАТЕЛЯ
+    user_filters = await filters_repo.get_filters(msg.from_user.id)  # Используем from_user.id вместо chat.id
+
     await msg.answer(f"🔎 Ищу билеты {data['from_city']} → {data['to_city']}...")
-    
+
     result = await parse_flights(origin=data['from_code'], destination=data['to_code'], depart_date=api_date)
-    
+
     if not result.get('data'):
         await msg.answer("😔 Билеты не найдены.")
         return await state.clear()
 
-    user_filters = await filters_repo.get_filters(msg.chat.id)
+    # ПРИМЕНЯЕМ ФИЛЬТРЫ
     flights = await filter_flights(result['data'], data, user_filters)
-    
+
     if not flights:
         await msg.answer("❌ Нет билетов под ваши фильтры.")
         return await state.clear()
 
     flights.sort(key=lambda x: x.get('price', float('inf')))
+
+    # Показываем, какие фильтры применялись
+    filter_info = ""
+    if user_filters:
+        if user_filters.price_limit and int(user_filters.price_limit) > 0:
+            filter_info += f"• Цена до: {user_filters.price_limit}₽\n"
+        if user_filters.transfers:
+            filter_info += f"• Пересадки: {user_filters.transfers}\n"
+        if user_filters.baggage:
+            filter_info += f"• Багаж: {user_filters.baggage}\n"
+
+    if filter_info:
+        await msg.answer(f"🛡️ **Применены постоянные фильтры:**\n{filter_info}")
+
     response = "🎫 **Найденные билеты:**\n\n"
     for i, flight in enumerate(flights[:5], 1):
         response += format_one_way_ticket(flight, data['from_city'], data['to_city'], i)
-    
+
     await msg.answer(response, parse_mode="Markdown", disable_web_page_preview=True)
-    
+
     # Предлагаем отслеживание
     await offer_tracking(msg, {**data, 'trip_type': 'one_way'})
     await state.clear()
+
 
 async def finish_search_round_trip(msg: types.Message, state: FSMContext):
     data = await state.get_data()
     date_there = format_date_for_api(data['depart_date'])
     date_back = format_date_for_api(data['return_date'])
+
+    # ПОЛУЧАЕМ ФИЛЬТРЫ ПОЛЬЗОВАТЕЛЯ
+    user_filters = await filters_repo.get_filters(msg.from_user.id)
+
     await msg.answer("🔎 Ищу билеты туда-обратно...")
-    
+
     res_there, res_back = await asyncio.gather(
         parse_flights(data['from_code'], data['to_code'], date_there),
         parse_flights(data['to_code'], data['from_code'], date_back)
     )
-    
+
     if not res_there.get('data') or not res_back.get('data'):
         await msg.answer("❌ Не нашли билеты в одну из сторон.")
         return await state.clear()
 
-    flights_there = sorted(res_there['data'], key=lambda x: x.get('price', 0))[:3]
-    flights_back = sorted(res_back['data'], key=lambda x: x.get('price', 0))[:3]
-    
+    # ПРИМЕНЯЕМ ФИЛЬТРЫ К ОБЕИМ НАПРАВЛЕНИЯМ
+    flights_there = await filter_flights(res_there['data'], data, user_filters)
+    flights_back = await filter_flights(res_back['data'], data, user_filters)
+
+    if not flights_there or not flights_back:
+        await msg.answer("❌ Нет билетов под ваши фильтры.")
+        return await state.clear()
+
+    # Сортируем и берем топ-3
+    flights_there = sorted(flights_there, key=lambda x: x.get('price', 0))[:3]
+    flights_back = sorted(flights_back, key=lambda x: x.get('price', 0))[:3]
+
+    # Показываем информацию о фильтрах
+    if user_filters:
+        filter_info = ""
+        if user_filters.price_limit and int(user_filters.price_limit) > 0:
+            filter_info += f"• Цена до: {user_filters.price_limit}₽\n"
+        if user_filters.transfers:
+            filter_info += f"• Пересадки: {user_filters.transfers}\n"
+        if user_filters.baggage:
+            filter_info += f"• Багаж: {user_filters.baggage}\n"
+
+        if filter_info:
+            await msg.answer(f"🛡️ **Применены постоянные фильтры:**\n{filter_info}")
+
     response = f"🎫 **Билеты {data['from_city']} ↔ {data['to_city']}:**\n\n"
     count = 1
     for ft in flights_there:
@@ -415,12 +483,13 @@ async def finish_search_round_trip(msg: types.Message, state: FSMContext):
             if count > 3: break
             response += format_round_trip_ticket(ft, fb, data['from_city'], data['to_city'], count)
             count += 1
-            
+
     await msg.answer(response, parse_mode="Markdown", disable_web_page_preview=True)
-    
+
     # Предлагаем отслеживание
     await offer_tracking(msg, {**data, 'trip_type': 'round_trip'})
     await state.clear()
+
 
 # ================ СЛОЖНЫЙ ПОИСК ================
 
