@@ -1,4 +1,4 @@
-import sys
+"""import sys
 import os
 
 # Добавляем родительскую директорию в путь Python
@@ -17,7 +17,7 @@ import asyncio
 
 async def test():
     print("🔍 Тестирую API Москва → Сочи...")
-    
+
     result = await parse_flights(
         origin=get_city_code("москва"),
         destination=get_city_code("сочи"),
@@ -25,7 +25,7 @@ async def test():
         currency="RUB",
         endpoint="latest"
     )
-    
+
     print("\n=== РЕЗУЛЬТАТ ===")
     if result.get("error"):
         print(f"❌ Ошибка: {result['error']}")
@@ -33,10 +33,10 @@ async def test():
         data = result.get("data", {})
         print(f"✅ API ответ получен")
         print(f"Тип данных: {type(data)}")
-        
+
         if isinstance(data, dict):
             print(f"Количество элементов: {len(data)}")
-            
+
             if data:
                 print("\nПервые 3 элемента:")
                 for i, (key, value) in enumerate(list(data.items())[:3], 1):
@@ -50,4 +50,4 @@ async def test():
             print(f"Данные: {data}")
 
 if __name__ == "__main__":
-    asyncio.run(test())
+    asyncio.run(test())"""

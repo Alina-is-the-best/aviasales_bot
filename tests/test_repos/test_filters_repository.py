@@ -3,10 +3,7 @@ from models.repo import filters_repository as repo
 
 @pytest.mark.asyncio
 async def test_create_filters_if_not_exists():
-    """
-    Проверяем:
-    - если у пользователя нет записи в БД
-    - get_filters создаёт её автоматически
+    """если у пользователя нет записи в БД get_filters создаёт её автоматически
     """
     user_id = 1001
 
@@ -20,10 +17,7 @@ async def test_create_filters_if_not_exists():
 
 @pytest.mark.asyncio
 async def test_update_filter():
-    """
-    Проверяем:
-    - update_filter реально сохраняет значение
-    """
+    """update_filter реально сохраняет значение"""
     user_id = 1002
 
     await repo.update_filter(user_id, "from_city", "Москва")
@@ -33,10 +27,7 @@ async def test_update_filter():
 
 @pytest.mark.asyncio
 async def test_clear_filter():
-    """
-    Проверяем:
-    - clear_filter очищает поле
-    """
+    """clear_filter очищает поле"""
     user_id = 1003
 
     await repo.update_filter(user_id, "baggage", "С багажом")

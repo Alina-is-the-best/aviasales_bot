@@ -27,7 +27,6 @@
 
 Linux/macOS: ```cp .env.template .env```
 
-Windows: ```copy .env.template .env```
 
 4. Построить Docker-образ (если нужен):
 
