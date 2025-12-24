@@ -97,7 +97,6 @@ def complex_add_more_kb():
 def tickets_main_kb():
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="Купленные билеты")],
             [KeyboardButton(text="Отслеживаемые билеты")],
             [KeyboardButton(text="⬅️ Назад в меню")],
         ],
@@ -140,7 +139,6 @@ def delete_ticket_kb(ticket_id: int):
 def tracked_main_kb():
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="Купленные билеты")],
             [KeyboardButton(text="Отслеживаемые билеты")],
             [KeyboardButton(text="⬅️ Назад в меню")]
         ],
