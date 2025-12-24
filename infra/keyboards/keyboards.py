@@ -180,7 +180,6 @@ def settings_menu():
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="Валюта")],
-            [KeyboardButton(text="Уведомления")],
             [KeyboardButton(text="Постоянные фильтры")],
             [KeyboardButton(text="⬅️ Назад в меню")]
         ],

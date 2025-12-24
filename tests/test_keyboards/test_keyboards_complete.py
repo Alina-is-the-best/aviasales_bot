@@ -99,10 +99,10 @@ def test_settings_menu():
     """Тест меню настроек"""
     kb = settings_menu()
     assert kb.resize_keyboard == True
-    assert len(kb.keyboard) == 4
+    assert len(kb.keyboard) == 3
 
     texts = [row[0].text for row in kb.keyboard]
-    assert texts == ["Валюта", "Уведомления", "Постоянные фильтры", "⬅️ Назад в меню"]
+    assert texts == ["Валюта", "Постоянные фильтры", "⬅️ Назад в меню"]
 
 
 def test_filters_menu():

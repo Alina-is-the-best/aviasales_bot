@@ -211,7 +211,7 @@ async def offer_tracking(msg: types.Message, data: dict):
     global last_search_data
     last_search_data = data.copy()
     
-    await msg.answer("Хотите получать уведомления об изменении цены?", reply_markup=kb)
+    await msg.answer("Хотите, чтобы я запомнил этот билет?", reply_markup=kb)
 
 # ================ ОБРАБОТЧИК КНОПКИ "НАЗАД" ================
 

@@ -28,15 +28,6 @@ async def currency_setting(msg: types.Message):
     )
 
 
-# УВЕДОМЛЕНИЯ
-@router.message(F.text == "Уведомления")
-async def notifications_setting(msg: types.Message):
-    await msg.answer(
-        "Функция уведомлений скоро появится 🔔",
-        reply_markup=keyboards.settings_menu()
-    )
-
-
 # ПОСТОЯННЫЕ ФИЛЬТРЫ
 @router.message(F.text == "Постоянные фильтры")
 async def filters_root(msg: types.Message):
