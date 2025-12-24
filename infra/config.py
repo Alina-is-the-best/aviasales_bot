@@ -1,11 +1,15 @@
 import os
-from dotenv import load_dotenv, find_dotenv
+import asyncio
 
-# ищем .env и загружаем его
-env_path = find_dotenv()
-if not env_path:
-    raise SystemExit("Переменные окружения не загружены: отсутствует файл .env")
-load_dotenv(env_path)
+from commands import search
+from aiogram import Bot, Dispatcher
 
-TOKEN = os.getenv("BOT_TOKEN", "8263957137:AAGsOZm7V4N-YLc6tpL71VzHYyLO3TXZRCg")
+
+# Получаем токены из переменных окружения Docker
+TOKEN = os.getenv("BOT_TOKEN")
 API_TOKEN = os.getenv("API_TOKEN")
+
+if not TOKEN or not API_TOKEN:
+    raise SystemExit(
+        "Не заданы обязательные переменные окружения: BOT_TOKEN или API_TOKEN"
+    )
