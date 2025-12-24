@@ -22,4 +22,9 @@ cd aviasales_bot
 3. Создайте файл .env на основе шаблона:
 Linux/macOS: cp .env.template .env
 Windows: copy .env.template .env
-4. 
+4. Построить Docker-образ (если нужен):
+docker build -t ellil1/aviasales-bot:latest .
+5. Запустить контейнер бота:
+docker run -d --name aviasales-bot --restart=always --env-file .env -p 80:80 ellil1/aviasales-bot:latest
+6. Настроить Watchtower для автообновления:
+docker run -d --name watchtower -v //var/run/docker.sock:/var/run/docker.sock containrrr/watchtower --interval 60 aviasales-bot
