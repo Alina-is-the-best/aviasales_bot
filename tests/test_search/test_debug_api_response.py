@@ -1,5 +1,5 @@
 import pytest
-from search import debug_api_response
+from commands.search import debug_api_response
 
 @pytest.mark.asyncio
 async def test_debug_api_response_with_empty_data(capsys):

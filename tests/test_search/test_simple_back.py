@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock
-from search import simple_from, simple_to
+from commands.search import simple_from, simple_to
 
 @pytest.mark.asyncio
 async def test_simple_from_back():

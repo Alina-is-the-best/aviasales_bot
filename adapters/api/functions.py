@@ -1,4 +1,4 @@
-from api import parse_flights
+from adapters.api import parse_flights
 
 async def get_latest_flights(origin: str, destination: str, depart_date: str, currency: str = "RUB"):
     '''Возвращает JSON с рейсами'''

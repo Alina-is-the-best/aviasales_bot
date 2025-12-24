@@ -1,5 +1,5 @@
 import pytest
-from search import apply_filters_to_flights
+from commands.search import apply_filters_to_flights
 
 class DummyFilters:
     price_limit = ""

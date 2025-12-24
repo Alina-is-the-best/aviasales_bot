@@ -1,5 +1,5 @@
 import pytest
-from api.aviasales_api import parse_flights
+from adapters.api.aviasales_api import parse_flights
 
 
 @pytest.mark.asyncio

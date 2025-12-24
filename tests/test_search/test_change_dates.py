@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock
-from search import change_dates_callback
+from commands.search import change_dates_callback
 
 @pytest.mark.asyncio
 async def test_change_dates_callback():

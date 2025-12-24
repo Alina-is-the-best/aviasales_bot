@@ -2,7 +2,7 @@ import pytest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from search import finish_search_one_way
+from commands.search import finish_search_one_way
 
 
 @pytest.mark.asyncio

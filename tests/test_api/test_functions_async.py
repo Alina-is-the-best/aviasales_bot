@@ -1,5 +1,5 @@
 import pytest
-from api import functions
+from adapters.api import functions
 
 @pytest.mark.asyncio
 async def test_get_latest_flights_calls_parse(monkeypatch):

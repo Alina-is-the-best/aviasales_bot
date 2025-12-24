@@ -1,5 +1,5 @@
 import pytest
-from handlers import help
+from infra.handlers import help
 
 
 class DummyMsg:

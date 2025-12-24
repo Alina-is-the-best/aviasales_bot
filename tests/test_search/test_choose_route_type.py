@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock
-from search import choose_route_type
+from commands.search import choose_route_type
 
 @pytest.mark.asyncio
 async def test_choose_route_type():

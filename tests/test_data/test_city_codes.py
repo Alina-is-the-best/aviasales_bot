@@ -1,4 +1,4 @@
-from data.city_codes import get_city_code
+from models.data.city_codes import get_city_code
 
 
 def test_get_city_code_known_city():

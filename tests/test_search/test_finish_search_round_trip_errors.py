@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock
 
-from search import finish_search_round_trip
+from commands.search import finish_search_round_trip
 
 
 @pytest.mark.asyncio

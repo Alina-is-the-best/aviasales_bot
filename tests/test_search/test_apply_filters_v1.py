@@ -1,7 +1,7 @@
 import pytest
 from types import SimpleNamespace
 
-from search import apply_filters_to_flights
+from commands.search import apply_filters_to_flights
 
 
 @pytest.mark.asyncio

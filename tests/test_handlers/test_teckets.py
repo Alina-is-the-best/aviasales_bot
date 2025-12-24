@@ -1,5 +1,5 @@
 import pytest
-from handlers import tickets as tickets_handler
+from infra.handlers import tickets as tickets_handler
 
 
 class DummyMsg:

@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock
-from search import show_flights_with_transfers
+from commands.search import show_flights_with_transfers
 
 @pytest.mark.asyncio
 async def test_show_with_transfers_no_data():

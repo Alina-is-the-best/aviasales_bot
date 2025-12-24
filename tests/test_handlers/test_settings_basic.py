@@ -1,5 +1,5 @@
 import pytest
-from handlers import settings
+from infra.handlers import settings
 
 
 class DummyMsg:

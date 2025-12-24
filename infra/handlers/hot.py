@@ -2,10 +2,10 @@ import asyncio
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 
-from keyboards import keyboards
-from states import HotTickets
-from api.aviasales_api import parse_flights
-from data.city_codes import get_city_code
+from infra.keyboards import keyboards
+from infra.states import HotTickets
+from adapters.api.aviasales_api import parse_flights
+from models.data.city_codes import get_city_code
 from utils.utils import format_one_way_ticket, is_date_in_coming_week
 
 router = Router()

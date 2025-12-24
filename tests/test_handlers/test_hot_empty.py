@@ -1,5 +1,5 @@
 import pytest
-from handlers import hot
+from infra.handlers import hot
 
 
 class DummyState:

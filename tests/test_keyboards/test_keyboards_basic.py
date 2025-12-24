@@ -1,4 +1,4 @@
-from keyboards.keyboards import main_menu, back_to_main
+from infra.keyboards.keyboards import main_menu, back_to_main
 
 def test_main_menu_returns_markup():
     kb = main_menu()

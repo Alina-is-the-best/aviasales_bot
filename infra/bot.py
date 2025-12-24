@@ -5,13 +5,13 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
 
-from keyboards import keyboards
-import search
+from infra.keyboards import keyboards
+import commands.search
 
-from handlers import settings, tracked, complex_search
-from handlers import tickets, back, help, hot
-from data.db import engine, Base
-from config import TOKEN
+from infra.handlers import settings, tracked, complex_search
+from infra.handlers import tickets, back, help, hot
+from models.data.db import engine, Base
+from infra.config import TOKEN
 
 
 async def main():
@@ -25,7 +25,7 @@ async def main():
     dp = Dispatcher(storage=MemoryStorage())
 
     # регистрация модулей
-    search.register(dp)
+    commands.search.register(dp)
     hot.register(dp)
     tickets.register(dp)
     settings.register(dp)

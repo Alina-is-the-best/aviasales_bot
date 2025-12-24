@@ -1,7 +1,7 @@
 import pytest
 from types import SimpleNamespace
 
-import bot
+import infra.bot
 
 
 @pytest.mark.asyncio
@@ -30,26 +30,26 @@ async def test_main_registers_all_modules(monkeypatch):
             calls.append("start_polling")
 
     # ---- patch Bot / Dispatcher ----
-    monkeypatch.setattr(bot, "Bot", FakeBot)
-    monkeypatch.setattr(bot, "Dispatcher", FakeDispatcher)
+    monkeypatch.setattr(infra.bot, "Bot", FakeBot)
+    monkeypatch.setattr(infra.bot, "Dispatcher", FakeDispatcher)
 
     # ---- patch register() функций ----
     def fake_register(dp):
         calls.append("register")
 
-    monkeypatch.setattr(bot.search, "register", fake_register)
-    monkeypatch.setattr(bot.hot, "register", fake_register)
-    monkeypatch.setattr(bot.tickets, "register", fake_register)
-    monkeypatch.setattr(bot.settings, "register", fake_register)
-    monkeypatch.setattr(bot.help, "register", fake_register)
-    monkeypatch.setattr(bot.complex_search, "register", fake_register)
-    monkeypatch.setattr(bot.tracked, "register", fake_register)
+    monkeypatch.setattr(infra.bot.search, "register", fake_register)
+    monkeypatch.setattr(infra.bot.hot, "register", fake_register)
+    monkeypatch.setattr(infra.bot.tickets, "register", fake_register)
+    monkeypatch.setattr(infra.bot.settings, "register", fake_register)
+    monkeypatch.setattr(infra.bot.help, "register", fake_register)
+    monkeypatch.setattr(infra.bot.complex_search, "register", fake_register)
+    monkeypatch.setattr(infra.bot.tracked, "register", fake_register)
 
     # ---- back router ----
-    monkeypatch.setattr(bot.back, "back_router", SimpleNamespace(name="back_router"))
+    monkeypatch.setattr(infra.bot.back, "back_router", SimpleNamespace(name="back_router"))
 
     # ---- RUN ----
-    await bot.main()
+    await infra.bot.main()
 
     # ---- ASSERTS ----
     assert calls.count("register") == 7

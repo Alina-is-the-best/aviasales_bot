@@ -1,4 +1,4 @@
-from keyboards.keyboards import (
+from infra.keyboards.keyboards import (
     main_menu,
     route_type_menu,
     baggage_kb,

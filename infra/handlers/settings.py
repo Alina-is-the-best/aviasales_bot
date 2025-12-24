@@ -1,7 +1,7 @@
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
-from keyboards import keyboards
-from states import UserFiltersState
+from infra.keyboards import keyboards
+from infra.states import UserFiltersState
 from models.repo import filters_repository as filters_repo
 
 router = Router()

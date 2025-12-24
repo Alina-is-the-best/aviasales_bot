@@ -1,7 +1,7 @@
 import pytest
 from types import SimpleNamespace
 
-from handlers import back
+from infra.handlers import back
 
 
 class DummyMsg:

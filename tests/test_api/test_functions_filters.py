@@ -1,4 +1,4 @@
-from api.functions import (
+from adapters.api.functions import (
     filter_by_price,
     filter_by_baggage,
     filter_by_stops,
